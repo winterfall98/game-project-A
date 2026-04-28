@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>QTE DODGE</title>
+  <link rel="stylesheet" href="/src/ui/styles.css" />
+  <style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}</style>
+</head>
+<body>
+  <div id="intro-screen">
+    <h1 class="game-title">QTE DODGE</h1>
+    <p class="game-subtitle">RAID PRACTICE SIMULATOR</p>
+    <button id="btn-start" class="btn btn-start">START</button>
+    <button id="btn-options" class="btn btn-options">OPTIONS</button>
+    <div id="mode-select-popup" class="popup-overlay">
+      <div class="popup-box">
+        <div class="popup-title">SELECT MODE</div>
+        <div class="mode-buttons">
+          <button id="btn-easy" class="btn-mode btn-easy">EASY</button>
+          <button id="btn-normal" class="btn-mode btn-normal">NORMAL</button>
+        </div>
+        <button id="btn-mode-cancel" class="btn-cancel">CANCEL</button>
+      </div>
+    </div>
+    <div id="options-panel" class="options-overlay">
+      <div class="options-box">
+        <div class="options-title">OPTIONS</div>
+        <div class="option-group">
+          <span class="option-label">Movement</span>
+          <div class="radio-group">
+            <label><input type="radio" name="controlMode" value="arrows" checked /> Arrow Keys</label>
+            <label><input type="radio" name="controlMode" value="wasd" /> WASD</label>
+          </div>
+        </div>
+        <div class="option-group">
+          <span class="option-label">Dodge Key</span>
+          <div class="radio-group">
+            <label><input type="radio" name="dodgeKey" value="SHIFT" checked /> Shift</label>
+            <label><input type="radio" name="dodgeKey" value="SPACE" /> Space</label>
+          </div>
+        </div>
+        <div class="options-actions">
+          <button id="btn-options-save" class="btn-save">SAVE</button>
+          <button id="btn-options-cancel" class="btn-cancel">CANCEL</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="game-container"></div>
+  <div id="result-screen" style="display:none;"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

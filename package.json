@@ -1,0 +1,20 @@
+{
+  "name": "qte-dodge-game",
+  "version": "0.1.0",
+  "description": "QTE 액션 피하기 게임 - 레이드 연습 시뮬레이터",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": ["phaser", "qte", "dodge", "game"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "vite": "^8.0.10"
+  }
+}

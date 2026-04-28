@@ -1,0 +1,307 @@
+/* === 전역 리셋 === */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', 'Noto Sans KR', sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* === 게임 컨테이너 === */
+#game-container {
+  display: none;
+  width: 800px;
+  height: 600px;
+}
+
+#game-container canvas {
+  display: block;
+}
+
+/* === 인트로 화면 === */
+#intro-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 800px;
+  height: 600px;
+  background: linear-gradient(135deg, #0d0d2b 0%, #1a1a3e 50%, #0d0d2b 100%);
+  border: 2px solid #2a2a5e;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 배경 그리드 효과 */
+#intro-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    linear-gradient(rgba(42, 42, 94, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(42, 42, 94, 0.3) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: gridScroll 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes gridScroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(40px); }
+}
+
+/* 타이틀 */
+.game-title {
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #4fc3f7;
+  text-shadow:
+    0 0 20px rgba(79, 195, 247, 0.5),
+    0 0 40px rgba(79, 195, 247, 0.3);
+  margin-bottom: 8px;
+  z-index: 1;
+  animation: titleGlow 2s ease-in-out infinite alternate;
+}
+
+.game-subtitle {
+  font-size: 16px;
+  color: #7c7caa;
+  letter-spacing: 6px;
+  margin-bottom: 60px;
+  z-index: 1;
+}
+
+@keyframes titleGlow {
+  0% { text-shadow: 0 0 20px rgba(79, 195, 247, 0.5), 0 0 40px rgba(79, 195, 247, 0.3); }
+  100% { text-shadow: 0 0 30px rgba(79, 195, 247, 0.8), 0 0 60px rgba(79, 195, 247, 0.5); }
+}
+
+/* 버튼 공통 */
+.btn {
+  padding: 14px 48px;
+  font-size: 18px;
+  font-weight: 700;
+  border: 2px solid;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 1;
+  font-family: inherit;
+  letter-spacing: 2px;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* 시작 버튼 */
+.btn-start {
+  background: transparent;
+  border-color: #4fc3f7;
+  color: #4fc3f7;
+  margin-bottom: 16px;
+}
+
+.btn-start:hover {
+  background: rgba(79, 195, 247, 0.15);
+  box-shadow: 0 0 20px rgba(79, 195, 247, 0.3);
+}
+
+/* 옵션 버튼 */
+.btn-options {
+  background: transparent;
+  border-color: #7c7caa;
+  color: #7c7caa;
+  padding: 10px 32px;
+  font-size: 14px;
+}
+
+.btn-options:hover {
+  background: rgba(124, 124, 170, 0.15);
+  border-color: #a0a0cc;
+  color: #a0a0cc;
+}
+
+/* === 모드 선택 팝업 === */
+.popup-overlay {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.popup-box {
+  background: #1a1a3e;
+  border: 2px solid #3a3a6e;
+  border-radius: 8px;
+  padding: 40px;
+  text-align: center;
+}
+
+.popup-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 24px;
+}
+
+.mode-buttons {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.btn-mode {
+  padding: 16px 36px;
+  font-size: 16px;
+  font-weight: 700;
+  border: 2px solid;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  background: transparent;
+}
+
+.btn-easy {
+  border-color: #66bb6a;
+  color: #66bb6a;
+}
+
+.btn-easy:hover {
+  background: rgba(102, 187, 106, 0.15);
+  box-shadow: 0 0 15px rgba(102, 187, 106, 0.3);
+}
+
+.btn-normal {
+  border-color: #ff7043;
+  color: #ff7043;
+}
+
+.btn-normal:hover {
+  background: rgba(255, 112, 67, 0.15);
+  box-shadow: 0 0 15px rgba(255, 112, 67, 0.3);
+}
+
+.btn-cancel {
+  background: transparent;
+  border: 1px solid #555;
+  color: #888;
+  padding: 8px 24px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.btn-cancel:hover {
+  color: #aaa;
+  border-color: #777;
+}
+
+/* === 옵션 패널 === */
+.options-overlay {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.options-box {
+  background: #1a1a3e;
+  border: 2px solid #3a3a6e;
+  border-radius: 8px;
+  padding: 32px 40px;
+  min-width: 340px;
+}
+
+.options-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.option-group {
+  margin-bottom: 20px;
+}
+
+.option-label {
+  display: block;
+  font-size: 14px;
+  color: #a0a0cc;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.radio-group {
+  display: flex;
+  gap: 16px;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #d0d0e0;
+}
+
+.radio-group input[type="radio"] {
+  accent-color: #4fc3f7;
+}
+
+.options-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.btn-save {
+  background: transparent;
+  border: 2px solid #4fc3f7;
+  color: #4fc3f7;
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 6px;
+  font-family: inherit;
+}
+
+.btn-save:hover {
+  background: rgba(79, 195, 247, 0.15);
+}
