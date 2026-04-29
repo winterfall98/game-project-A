@@ -96,6 +96,19 @@ export const DIFFICULTY_TUNING = {
 };
 
 /**
+ * 그룹별로 등장 가능한 패턴 풀.
+ * randomFloorPatternEvents가 이 풀에서 무작위 추출한다.
+ *
+ * 새 패턴을 그룹에 등장시키려면 여기에 이름만 추가하면 된다.
+ */
+export const GROUP_PATTERN_POOLS = {
+  tutorial:  ['orbit', 'sweep'],
+  growth:    ['orbit', 'sweep', 'checker'],
+  challenge: ['orbit', 'sweep', 'checker', 'radial'],
+  hell:      ['orbit', 'sweep', 'checker', 'radial', 'scatter'],
+};
+
+/**
  * stagePatterns.js에서 사용하는 헬퍼.
  * 그룹/패턴 이름만 적으면 DIFFICULTY_TUNING이 자동 적용된 params를 만들어준다.
  *
@@ -107,6 +120,45 @@ export const DIFFICULTY_TUNING = {
 export function buildFloorPatternParams(name, group, overrides = {}) {
   const groupTuning = (DIFFICULTY_TUNING[group] && DIFFICULTY_TUNING[group][name]) || {};
   return { name, ...groupTuning, ...overrides };
+}
+
+/**
+ * 무작위 burst 이벤트 생성기.
+ * 스테이지의 [startTime, endTime] 구간에 count개의 floorPattern 이벤트를
+ * 무작위 시간/무작위 패턴으로 분산하여 생성한다. 모듈 로드 시점(=페이지
+ * 새로고침)마다 새로 셔플되므로 매 세션 다른 mix가 나온다.
+ *
+ * 같은 시간/근접 시간에 여러 패턴이 떨어질 수 있어 자연스럽게 시각적으로
+ * 겹치는 효과가 난다.
+ *
+ * @param {string} group - 'tutorial' | 'growth' | 'challenge' | 'hell'
+ * @param {object} options
+ * @param {number} options.count - 생성할 패턴 수
+ * @param {number} options.endTime - 분산 구간 끝(초). 보통 stage.duration - 2.
+ * @param {number} [options.startTime=4] - 분산 구간 시작(초). 너무 이르면 0.
+ * @param {string[]} [options.pool] - GROUP_PATTERN_POOLS를 덮어쓰고 싶을 때
+ * @returns {Array<object>} STAGE_N.events.push(...) 으로 spread 가능한 이벤트 배열
+ */
+export function randomFloorPatternEvents(group, options) {
+  const { count, endTime, startTime = 4, pool = GROUP_PATTERN_POOLS[group] } = options;
+  if (!pool || pool.length === 0) {
+    throw new Error(`randomFloorPatternEvents: unknown group '${group}'`);
+  }
+  if (typeof endTime !== 'number') {
+    throw new Error('randomFloorPatternEvents: endTime is required');
+  }
+
+  const events = [];
+  for (let i = 0; i < count; i++) {
+    const time = parseFloat((startTime + Math.random() * (endTime - startTime)).toFixed(1));
+    const name = pool[Math.floor(Math.random() * pool.length)];
+    events.push({
+      time,
+      type: 'floorPattern',
+      params: buildFloorPatternParams(name, group),
+    });
+  }
+  return events;
 }
 
 // ─────────────────────────────────────────────────────────
