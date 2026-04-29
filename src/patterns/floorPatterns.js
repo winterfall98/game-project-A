@@ -145,7 +145,52 @@ export function orbit(scene, floorManager, params) {
 }
 
 export function sweep(scene, floorManager, params) {
-  // 다음 task에서 구현
+  const cfg = { ...DEFAULTS.sweep, ...params };
+  const horizontal = cfg.axis === 'horizontal';
+
+  // 평행선의 중심선 좌표 계산
+  // lines=1: 화면 중앙 한 줄
+  // lines=2: 중심에서 ±gap/2
+  // lines=3: 중심 + ±gap
+  const centers = [];
+  if (cfg.lines === 1) {
+    centers.push(horizontal ? GAME_HEIGHT / 2 : GAME_WIDTH / 2);
+  } else {
+    const baseAxisLen = horizontal ? GAME_HEIGHT : GAME_WIDTH;
+    const center = baseAxisLen / 2;
+    const totalSpan = (cfg.lines - 1) * cfg.gap;
+    const start = center - totalSpan / 2;
+    for (let i = 0; i < cfg.lines; i++) {
+      centers.push(start + cfg.gap * i);
+    }
+  }
+
+  // 각 선을 시간차로 spawn
+  centers.forEach((centerCoord, i) => {
+    scene.time.delayedCall(cfg.lineDelay * i, () => {
+      const sweepParams = horizontal
+        ? {
+            x: GAME_WIDTH / 2,
+            y: centerCoord,
+            width: GAME_WIDTH,
+            height: cfg.thickness,
+          }
+        : {
+            x: centerCoord,
+            y: GAME_HEIGHT / 2,
+            width: cfg.thickness,
+            height: GAME_HEIGHT,
+          };
+
+      floorManager.spawn({
+        ...sweepParams,
+        shape: 'rect',
+        variant: 'normal',
+        warningTime: cfg.warningTime,
+        activeTime: cfg.activeTime,
+      });
+    });
+  });
 }
 
 export function checker(scene, floorManager, params) {
