@@ -14,6 +14,14 @@ export default class UIScene extends Phaser.Scene {
     this.gameMode = data.mode || 'normal';
     this.currentStage = data.stage || 1;
     this.isBoss = data.isBoss || false;
+    // Phaser 자동 등록에 의존하지 않고 명시적으로 shutdown 핸들러 등록
+    this.events.once('shutdown', this._onShutdown, this);
+  }
+
+  _onShutdown() {
+    console.log('[UIScene] shutdown -> unbinding cross-scene listeners');
+    this._unbindSceneEvents('GameScene');
+    this._unbindSceneEvents('BossScene');
   }
 
   create() {
@@ -93,6 +101,23 @@ export default class UIScene extends Phaser.Scene {
     scene.events.on('updateCombo', this.onUpdateCombo, this);
     scene.events.on('updateBombs', this.onUpdateBombs, this);
     scene.events.on('updateMultiplier', this.onUpdateMultiplier, this);
+  }
+
+  // cross-scene 리스너 누수 방지: UIScene shutdown 시 GameScene/BossScene events에서 명시적 해제
+  _unbindSceneEvents(sceneName) {
+    const scene = this.scene.get(sceneName);
+    if (!scene || !scene.events) return;
+    scene.events.off('updateHP', this.onUpdateHP, this);
+    scene.events.off('updateStamina', this.onUpdateStamina, this);
+    scene.events.off('updateScore', this.onUpdateScore, this);
+    scene.events.off('updateCombo', this.onUpdateCombo, this);
+    scene.events.off('updateBombs', this.onUpdateBombs, this);
+    scene.events.off('updateMultiplier', this.onUpdateMultiplier, this);
+  }
+
+  shutdown() {
+    this._unbindSceneEvents('GameScene');
+    this._unbindSceneEvents('BossScene');
   }
 
   drawHPBar(current, max) {
