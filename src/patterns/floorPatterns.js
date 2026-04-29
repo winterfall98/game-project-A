@@ -194,15 +194,115 @@ export function sweep(scene, floorManager, params) {
 }
 
 export function checker(scene, floorManager, params) {
-  // 다음 task에서 구현
+  const cfg = { ...DEFAULTS.checker, ...params };
+
+  const cellW = GAME_WIDTH / cfg.cols;
+  const cellH = GAME_HEIGHT / cfg.rows;
+  const innerW = cellW * cfg.cellInset;
+  const innerH = cellH * cfg.cellInset;
+
+  // 페이즈별 셀 좌표 수집
+  const phase1Cells = [];
+  const phase2Cells = [];
+  for (let r = 0; r < cfg.rows; r++) {
+    for (let c = 0; c < cfg.cols; c++) {
+      const x = cellW * c + cellW / 2;
+      const y = cellH * r + cellH / 2;
+      if ((c + r) % 2 === 0) {
+        phase1Cells.push({ x, y });
+      } else {
+        phase2Cells.push({ x, y });
+      }
+    }
+  }
+
+  const spawnCells = (cells) => {
+    cells.forEach((pos) => {
+      floorManager.spawn({
+        x: pos.x,
+        y: pos.y,
+        width: innerW,
+        height: innerH,
+        shape: 'rect',
+        variant: 'normal',
+        warningTime: cfg.warningTime,
+        activeTime: cfg.activeTime,
+      });
+    });
+  };
+
+  // 페이즈 1: 즉시
+  spawnCells(phase1Cells);
+  // 페이즈 2: phaseDelay 후
+  scene.time.delayedCall(cfg.phaseDelay, () => spawnCells(phase2Cells));
 }
 
 export function radial(scene, floorManager, params) {
-  // 다음 task에서 구현
+  const cfg = { ...DEFAULTS.radial, ...params };
+
+  for (let r = 0; r < cfg.rings; r++) {
+    const ringRadius = cfg.innerRadius + cfg.ringThickness * r;
+    const circumference = 2 * Math.PI * ringRadius;
+    // ring 둘레에 작은 장판 배치 (ringSegmentSpacing 간격)
+    const segCount = Math.max(6, Math.ceil(circumference / cfg.ringSegmentSpacing));
+    const angleStep = (Math.PI * 2) / segCount;
+
+    scene.time.delayedCall(cfg.step * r, () => {
+      for (let i = 0; i < segCount; i++) {
+        const angle = angleStep * i;
+        const x = cfg.centerX + Math.cos(angle) * ringRadius;
+        const y = cfg.centerY + Math.sin(angle) * ringRadius;
+        // 화면 밖으로 나간 segment는 skip (성능 + 시각 정리)
+        if (x < -50 || x > GAME_WIDTH + 50 || y < -50 || y > GAME_HEIGHT + 50) continue;
+
+        floorManager.spawn({
+          x, y,
+          width: cfg.floorRadius * 2,
+          height: cfg.floorRadius * 2,
+          shape: 'circle',
+          variant: 'normal',
+          warningTime: cfg.warningTime,
+          activeTime: cfg.activeTime,
+        });
+      }
+    });
+  }
 }
 
 export function scatter(scene, floorManager, params) {
-  // 다음 task에서 구현
+  const cfg = { ...DEFAULTS.scatter, ...params };
+
+  const positions = [];
+  for (let i = 0; i < cfg.count; i++) {
+    let chosen = null;
+    for (let attempt = 0; attempt < cfg.retries; attempt++) {
+      const candidate = {
+        x: Phaser.Math.Between(cfg.margin, GAME_WIDTH - cfg.margin),
+        y: Phaser.Math.Between(cfg.margin, GAME_HEIGHT - cfg.margin),
+      };
+      const tooClose = positions.some(
+        (p) => Phaser.Math.Distance.Between(p.x, p.y, candidate.x, candidate.y) < cfg.minDistance
+      );
+      if (!tooClose) { chosen = candidate; break; }
+      chosen = candidate; // 마지막 후보는 fallback으로 채택
+    }
+    positions.push(chosen);
+  }
+
+  positions.forEach((pos, i) => {
+    scene.time.delayedCall(cfg.spawnInterval * i, () => {
+      floorManager.spawn({
+        x: pos.x,
+        y: pos.y,
+        width: cfg.floorRadius * 2,
+        height: cfg.floorRadius * 2,
+        shape: 'circle',
+        variant: 'normal',
+        warningTime: cfg.warningTime,
+        activeTime: cfg.activeTime,
+      });
+    });
+  });
 }
 
 // 이름→함수 맵 (GimmickManager가 디스패치에 사용)
