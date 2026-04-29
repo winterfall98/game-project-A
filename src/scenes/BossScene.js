@@ -7,6 +7,11 @@ import BulletManager from '../systems/BulletManager.js';
 import FloorManager from '../systems/FloorManager.js';
 import QTEManager from '../systems/QTEManager.js';
 import { getBossConfig } from '../patterns/bossConfigs.js';
+import {
+  FLOOR_PATTERNS,
+  GROUP_PATTERN_POOLS,
+  buildFloorPatternParams,
+} from '../patterns/floorPatterns.js';
 
 /**
  * BossScene - Boss battle scene
@@ -65,10 +70,15 @@ export default class BossScene extends Phaser.Scene {
     this._setupBossCallbacks();
     this.boss.startBehavior();
 
-    // Boss collision with player (charge damage)
+    // Boss collision: charge 시 큰 데미지, 그 외 평상시 부딪힘에도 약한 데미지.
+    // Player.takeDamage가 자체 invincibility(500ms)를 부여하므로 별도 cooldown 불필요.
     this.physics.add.overlap(this.player, this.boss, () => {
-      if (!this.player.isInvincible && this.boss.state === 'charge') {
+      if (this.player.isInvincible) return;
+      if (!this.boss.isAlive || this.boss.isStunned) return;
+      if (this.boss.state === 'charge') {
         this.player.takeDamage(this.bossConfig.attacks.charge?.damage || 20);
+      } else {
+        this.player.takeDamage(this.bossConfig.contactDamage || 5);
       }
     });
 
@@ -79,6 +89,16 @@ export default class BossScene extends Phaser.Scene {
       callbackScope: this,
       loop: true,
     });
+
+    // 보스전 floor 패턴 timer — 정기적으로 그룹 풀에서 무작위 패턴을 발동
+    if (this.bossConfig.floorPattern) {
+      this._floorPatternTimer = this.time.addEvent({
+        delay: this.bossConfig.floorPattern.interval,
+        callback: this._triggerBossFloorPattern,
+        callbackScope: this,
+        loop: true,
+      });
+    }
 
     // Arena shrink (stage 20 only)
     if (this.bossConfig.arenaShrink) {
@@ -148,14 +168,20 @@ export default class BossScene extends Phaser.Scene {
       this.time.delayedCall(500, () => { this._floorHitCooldown = false; });
     }
 
-    // Boss idle drift
-    if (this.boss && this.boss.isAlive && this.boss.state === 'idle') {
-      if (Math.random() < 0.005) {
-        this.boss.driftTo(
-          Phaser.Math.Between(100, GAME_WIDTH - 100),
-          Phaser.Math.Between(60, GAME_HEIGHT / 3),
-          2500
-        );
+    // Boss chase: idle 상태에서 player 방향으로 천천히 이동
+    // ATTACK/CHARGE/STUN/RAGE 중에는 그 동작이 우선이므로 chase 비활성
+    if (this.boss && this.boss.isAlive && this.boss.state === 'idle' && !this.boss.isStunned) {
+      const dx = this.player.x - this.boss.x;
+      const dy = this.player.y - this.boss.y;
+      const dist = Math.hypot(dx, dy);
+      const minDist = 80; // 너무 가까우면 정지 (player와 밀착 방지)
+      if (dist > minDist) {
+        const baseSpeed = this.bossConfig.chaseSpeed || 80;
+        const phaseSpeedMult = this.bossConfig.phases[this.boss.currentPhase]?.speedMult || 1;
+        const speed = baseSpeed * phaseSpeedMult;
+        this.boss.body.setVelocity((dx / dist) * speed, (dy / dist) * speed);
+      } else {
+        this.boss.body.setVelocity(0, 0);
       }
     }
   }
@@ -370,6 +396,24 @@ export default class BossScene extends Phaser.Scene {
   }
 
   // ===================================================
+  // Boss Floor Pattern (지정 그룹의 풀에서 무작위 패턴 발동)
+  // ===================================================
+
+  _triggerBossFloorPattern() {
+    if (!this.boss || !this.boss.isAlive) return;
+    const fp = this.bossConfig.floorPattern;
+    if (!fp) return;
+    const pool = GROUP_PATTERN_POOLS[fp.group];
+    if (!pool || pool.length === 0) return;
+
+    const name = pool[Math.floor(Math.random() * pool.length)];
+    const fn = FLOOR_PATTERNS[name];
+    if (!fn) return;
+    const params = buildFloorPatternParams(name, fp.group);
+    fn(this, this.floorManager, params);
+  }
+
+  // ===================================================
   // Damage QTE (deal damage to boss)
   // ===================================================
 
@@ -406,6 +450,7 @@ export default class BossScene extends Phaser.Scene {
     // Stop all timers
     if (this._qteTimer) this._qteTimer.remove(false);
     if (this._countdownTimer) this._countdownTimer.remove(false);
+    if (this._floorPatternTimer) this._floorPatternTimer.remove(false);
 
     // Clear gimmicks
     this.laserManager.clearAll();
@@ -635,6 +680,7 @@ export default class BossScene extends Phaser.Scene {
   shutdown() {
     if (this._qteTimer) this._qteTimer.remove(false);
     if (this._countdownTimer) this._countdownTimer.remove(false);
+    if (this._floorPatternTimer) this._floorPatternTimer.remove(false);
     if (this.qteManager) this.qteManager.destroy();
   }
 }

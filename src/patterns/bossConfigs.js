@@ -13,6 +13,12 @@ const BOSS_1 = {
   bossIndex: 0,
   maxHP: 400,
   attackCooldown: { min: 2500, max: 4000 },
+  // 평상시 부딪힘 데미지 (charge 시는 attacks.charge.damage 사용)
+  contactDamage: 5,
+  // 플레이어 추적 속도 (px/s, phases[i].speedMult로 곱해짐)
+  chaseSpeed: 60,
+  // 보스전에서 등장할 floor 패턴 설정
+  floorPattern: { interval: 8000, group: 'tutorial' },
   phases: [
     {
       hpThreshold: 1.0,
@@ -46,6 +52,9 @@ const BOSS_2 = {
   bossIndex: 1,
   maxHP: 600,
   attackCooldown: { min: 2000, max: 3500 },
+  contactDamage: 8,
+  chaseSpeed: 75,
+  floorPattern: { interval: 7000, group: 'growth' },
   phases: [
     {
       hpThreshold: 1.0,
@@ -86,6 +95,9 @@ const BOSS_3 = {
   bossIndex: 2,
   maxHP: 800,
   attackCooldown: { min: 1800, max: 3000 },
+  contactDamage: 12,
+  chaseSpeed: 90,
+  floorPattern: { interval: 6000, group: 'challenge' },
   phases: [
     {
       hpThreshold: 1.0,
@@ -128,6 +140,9 @@ const BOSS_4 = {
   attackCooldown: { min: 1500, max: 2500 },
   timeLimit: 90,
   arenaShrink: true,
+  contactDamage: 15,
+  chaseSpeed: 105,
+  floorPattern: { interval: 5000, group: 'hell' },
   phases: [
     {
       hpThreshold: 1.0,
