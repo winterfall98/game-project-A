@@ -50,10 +50,14 @@ export default class GameScene extends Phaser.Scene {
     this.setupInput();
     this.scene.stop('UIScene');
     this.scene.launch('UIScene', { mode: this.gameMode, stage: this.currentStage });
-    this.events.emit('updateHP', { current: this.player.hp, max: PLAYER.MAX_HP });
-    this.events.emit('updateStamina', { current: this.player.stamina, max: PLAYER.MAX_STAMINA });
-    this.events.emit('updateScore', { score: this.totalScore });
-    this.events.emit('updateBombs', { count: this.qteManager.bombs });
+    // 초기 HUD 동기화 emit은 한 프레임 지연시켜, 새 UIScene이 launch+bind된 뒤에 수신하도록 보장
+    // (이전 UIScene 인스턴스의 destroy된 Text에 도달하는 것을 방지)
+    this.time.delayedCall(0, function() {
+      this.events.emit('updateHP', { current: this.player.hp, max: PLAYER.MAX_HP });
+      this.events.emit('updateStamina', { current: this.player.stamina, max: PLAYER.MAX_STAMINA });
+      this.events.emit('updateScore', { score: this.totalScore });
+      this.events.emit('updateBombs', { count: this.qteManager.bombs });
+    }, [], this);
     this._loadStagePattern();
     this.events.on('playerDeath', this._onGameOver, this);
     this.game.events.emit('gameStarted', { mode: this.gameMode, stage: this.currentStage });
