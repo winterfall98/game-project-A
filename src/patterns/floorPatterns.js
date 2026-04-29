@@ -115,7 +115,33 @@ export function buildFloorPatternParams(name, group, overrides = {}) {
 
 /** @type {(scene: Phaser.Scene, floorManager: any, params: object) => void} */
 export function orbit(scene, floorManager, params) {
-  // 다음 task에서 구현
+  const cfg = { ...DEFAULTS.orbit, ...params };
+
+  // 호출 시점의 플레이어 위치를 캡쳐 (이후 추적하지 않음)
+  const player = scene.player;
+  const cx = player ? player.x : GAME_WIDTH / 2;
+  const cy = player ? player.y : GAME_HEIGHT / 2;
+
+  const sign = cfg.direction === 'ccw' ? -1 : 1;
+  const angleStep = (Math.PI * 2) / cfg.count;
+
+  for (let i = 0; i < cfg.count; i++) {
+    const angle = sign * angleStep * i;
+    const x = cx + Math.cos(angle) * cfg.radius;
+    const y = cy + Math.sin(angle) * cfg.radius;
+
+    scene.time.delayedCall(cfg.step * i, () => {
+      floorManager.spawn({
+        x, y,
+        width: cfg.floorRadius * 2,
+        height: cfg.floorRadius * 2,
+        shape: 'circle',
+        variant: 'normal',
+        warningTime: cfg.warningTime,
+        activeTime: cfg.activeTime,
+      });
+    });
+  }
 }
 
 export function sweep(scene, floorManager, params) {
