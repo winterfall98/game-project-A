@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../constants/game.js';
+import { FLOOR_PATTERNS } from '../patterns/floorPatterns.js';
 
 /**
  * GimmickManager
@@ -86,6 +87,18 @@ export default class GimmickManager {
         this.qteManager.startSequence(sequence, (results) => {
           console.log('[GimmickManager] QTE 결과:', results);
         });
+        break;
+      }
+
+      case 'floorPattern': {
+        const fn = FLOOR_PATTERNS[p.name];
+        if (!fn) {
+          console.warn('[GimmickManager] unknown floorPattern:', p.name);
+          break;
+        }
+        // 패턴 자체가 위치를 결정하므로 _randomizeParams는 그대로 통과시킨다
+        // (switch에 'floorPattern' 케이스가 없어 기본 경로로 통과됨).
+        fn(this.scene, this.floorManager, p);
         break;
       }
 
@@ -188,6 +201,10 @@ export default class GimmickManager {
             if (floorCount > 2) return null; // 동시 2개 제한
             break;
 
+          case 'floorPattern':
+            // easy 모드에서는 복합 패턴 제거 (난이도 단순화)
+            return null;
+
           case 'laser':
             // 꺾임 제거 → 직선으로 변환
             if (e.params.bendX !== undefined) {
@@ -230,7 +247,8 @@ export default class GimmickManager {
     });
 
     // 비QTE 이벤트를 복제하여 짧은 시간 오프셋으로 추가 (강한 중첩)
-    const nonQteEvents = events.filter((ev) => ev.type !== 'qte');
+    // floorPattern은 시간 오프셋만 다른 복제가 의미가 없으므로 제외
+    const nonQteEvents = events.filter((ev) => ev.type !== 'qte' && ev.type !== 'floorPattern');
     const extraCount = Math.round(nonQteEvents.length * (mult - 1));
 
     for (let i = 0; i < extraCount; i++) {

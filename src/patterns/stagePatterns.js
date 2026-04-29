@@ -7,6 +7,8 @@
  * Game area: 800x600
  */
 
+import { buildFloorPatternParams } from './floorPatterns.js';
+
 // Difficulty multipliers for each stage
 const STAGE_CONFIGS = {
   1: { bulletSpeedMult: 1.0, bulletCountMult: 1.0, warningTimeMult: 1.0, qteTimingMult: 1.0 },
@@ -1814,6 +1816,92 @@ const STAGE_PATTERNS = {
   19: STAGE_19,
   20: STAGE_20,
 };
+
+// ─────────────────────────────────────────────────────────
+// 복합 floor 패턴 이벤트 추가 (난이도 그룹별).
+// 기존 stage 정의를 손대지 않고 events 배열에 push만 한다.
+// 패턴 명세와 매핑 표는 docs/superpowers/specs/2026-04-29-floor-patterns-design.md 참조.
+// ─────────────────────────────────────────────────────────
+
+// Tutorial group (stages 1-4) — ORBIT, SWEEP
+STAGE_1.events.push(
+  { time: 27, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'tutorial') },
+);
+STAGE_2.events.push(
+  { time: 22, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'tutorial') },
+);
+STAGE_3.events.push(
+  { time: 18, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'tutorial') },
+  { time: 26, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'tutorial') },
+);
+STAGE_4.events.push(
+  { time: 16, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'tutorial', { lines: 2, lineDelay: 400 }) },
+  { time: 26, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'tutorial') },
+);
+
+// Growth group (stages 6-9) — + CHECKER
+STAGE_6.events.push(
+  { time: 14, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'growth') },
+  { time: 24, type: 'floorPattern', params: buildFloorPatternParams('checker', 'growth') },
+);
+STAGE_7.events.push(
+  { time: 12, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'growth') },
+  { time: 22, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'growth', { direction: 'ccw' }) },
+);
+STAGE_8.events.push(
+  { time: 13, type: 'floorPattern', params: buildFloorPatternParams('checker', 'growth') },
+  { time: 25, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'growth', { axis: 'vertical' }) },
+);
+STAGE_9.events.push(
+  { time: 11, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'growth') },
+  { time: 21, type: 'floorPattern', params: buildFloorPatternParams('checker', 'growth') },
+  { time: 28, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'growth') },
+);
+
+// Challenge group (stages 11-14) — + RADIAL
+STAGE_11.events.push(
+  { time: 10, type: 'floorPattern', params: buildFloorPatternParams('radial', 'challenge') },
+  { time: 22, type: 'floorPattern', params: buildFloorPatternParams('checker', 'challenge') },
+);
+STAGE_12.events.push(
+  { time: 9,  type: 'floorPattern', params: buildFloorPatternParams('sweep', 'challenge') },
+  { time: 19, type: 'floorPattern', params: buildFloorPatternParams('radial', 'challenge') },
+  { time: 28, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'challenge') },
+);
+STAGE_13.events.push(
+  { time: 11, type: 'floorPattern', params: buildFloorPatternParams('checker', 'challenge') },
+  { time: 21, type: 'floorPattern', params: buildFloorPatternParams('radial', 'challenge') },
+  { time: 30, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'challenge', { axis: 'vertical' }) },
+);
+STAGE_14.events.push(
+  { time: 8,  type: 'floorPattern', params: buildFloorPatternParams('radial', 'challenge') },
+  { time: 18, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'challenge', { direction: 'ccw' }) },
+  { time: 27, type: 'floorPattern', params: buildFloorPatternParams('checker', 'challenge') },
+);
+
+// Hell group (stages 16-19) — + SCATTER
+STAGE_16.events.push(
+  { time: 8,  type: 'floorPattern', params: buildFloorPatternParams('scatter', 'hell') },
+  { time: 18, type: 'floorPattern', params: buildFloorPatternParams('radial', 'hell') },
+  { time: 28, type: 'floorPattern', params: buildFloorPatternParams('checker', 'hell') },
+);
+STAGE_17.events.push(
+  { time: 9,  type: 'floorPattern', params: buildFloorPatternParams('orbit', 'hell') },
+  { time: 19, type: 'floorPattern', params: buildFloorPatternParams('scatter', 'hell') },
+  { time: 28, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'hell') },
+);
+STAGE_18.events.push(
+  { time: 7,  type: 'floorPattern', params: buildFloorPatternParams('radial', 'hell') },
+  { time: 17, type: 'floorPattern', params: buildFloorPatternParams('scatter', 'hell') },
+  { time: 24, type: 'floorPattern', params: buildFloorPatternParams('checker', 'hell') },
+  { time: 32, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'hell') },
+);
+STAGE_19.events.push(
+  { time: 6,  type: 'floorPattern', params: buildFloorPatternParams('scatter', 'hell') },
+  { time: 14, type: 'floorPattern', params: buildFloorPatternParams('radial', 'hell') },
+  { time: 22, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'hell', { lines: 3 }) },
+  { time: 30, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'hell', { direction: 'ccw' }) },
+);
 
 /**
  * Get the pattern for a specific stage
