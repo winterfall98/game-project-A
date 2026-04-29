@@ -7,7 +7,7 @@
  * Game area: 800x600
  */
 
-import { buildFloorPatternParams } from './floorPatterns.js';
+import { randomFloorPatternEvents } from './floorPatterns.js';
 
 // Difficulty multipliers for each stage
 const STAGE_CONFIGS = {
@@ -1818,90 +1818,41 @@ const STAGE_PATTERNS = {
 };
 
 // ─────────────────────────────────────────────────────────
-// 복합 floor 패턴 이벤트 추가 (난이도 그룹별).
-// 기존 stage 정의를 손대지 않고 events 배열에 push만 한다.
-// 패턴 명세와 매핑 표는 docs/superpowers/specs/2026-04-29-floor-patterns-design.md 참조.
+// 복합 floor 패턴 이벤트 추가 (난이도 그룹별, 무작위 burst).
+//
+// 모듈 로드 시점(=페이지 새로고침)마다 randomFloorPatternEvents가
+// 그룹의 패턴 풀에서 무작위 추출 + 무작위 시간 분산하여 events에 push한다.
+// → 매 세션 다른 패턴 mix, 같은 시간대에 패턴이 자연스럽게 겹쳐 dense한
+//    "마구 섞이는" 느낌을 만든다.
+//
+// count, startTime, endTime 튜닝은 floorPatterns.js의 한 곳에 모인 것은
+// 아니지만(stage별로 상이), 그룹 단위로 일관된 값을 쓰므로 조정 시 검색·교체가 쉽다.
+// 그룹별 등장 패턴 풀은 floorPatterns.js의 GROUP_PATTERN_POOLS에서 관리.
 // ─────────────────────────────────────────────────────────
 
-// Tutorial group (stages 1-4) — ORBIT, SWEEP
-STAGE_1.events.push(
-  { time: 27, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'tutorial') },
-);
-STAGE_2.events.push(
-  { time: 22, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'tutorial') },
-);
-STAGE_3.events.push(
-  { time: 18, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'tutorial') },
-  { time: 26, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'tutorial') },
-);
-STAGE_4.events.push(
-  { time: 16, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'tutorial', { lines: 2, lineDelay: 400 }) },
-  { time: 26, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'tutorial') },
-);
+// Tutorial group (stages 1-4): duration 30s, count 6 → 평균 ~4초 간격
+STAGE_1.events.push(...randomFloorPatternEvents('tutorial', { count: 6, endTime: 28 }));
+STAGE_2.events.push(...randomFloorPatternEvents('tutorial', { count: 6, endTime: 28 }));
+STAGE_3.events.push(...randomFloorPatternEvents('tutorial', { count: 6, endTime: 28 }));
+STAGE_4.events.push(...randomFloorPatternEvents('tutorial', { count: 6, endTime: 28 }));
 
-// Growth group (stages 6-9) — + CHECKER
-STAGE_6.events.push(
-  { time: 14, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'growth') },
-  { time: 24, type: 'floorPattern', params: buildFloorPatternParams('checker', 'growth') },
-);
-STAGE_7.events.push(
-  { time: 12, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'growth') },
-  { time: 22, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'growth', { direction: 'ccw' }) },
-);
-STAGE_8.events.push(
-  { time: 13, type: 'floorPattern', params: buildFloorPatternParams('checker', 'growth') },
-  { time: 25, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'growth', { axis: 'vertical' }) },
-);
-STAGE_9.events.push(
-  { time: 11, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'growth') },
-  { time: 21, type: 'floorPattern', params: buildFloorPatternParams('checker', 'growth') },
-  { time: 28, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'growth') },
-);
+// Growth group (stages 6-9): duration 35s, count 8 → 평균 ~4초 간격
+STAGE_6.events.push(...randomFloorPatternEvents('growth', { count: 8, endTime: 33 }));
+STAGE_7.events.push(...randomFloorPatternEvents('growth', { count: 8, endTime: 33 }));
+STAGE_8.events.push(...randomFloorPatternEvents('growth', { count: 8, endTime: 33 }));
+STAGE_9.events.push(...randomFloorPatternEvents('growth', { count: 8, endTime: 33 }));
 
-// Challenge group (stages 11-14) — + RADIAL
-STAGE_11.events.push(
-  { time: 10, type: 'floorPattern', params: buildFloorPatternParams('radial', 'challenge') },
-  { time: 22, type: 'floorPattern', params: buildFloorPatternParams('checker', 'challenge') },
-);
-STAGE_12.events.push(
-  { time: 9,  type: 'floorPattern', params: buildFloorPatternParams('sweep', 'challenge') },
-  { time: 19, type: 'floorPattern', params: buildFloorPatternParams('radial', 'challenge') },
-  { time: 28, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'challenge') },
-);
-STAGE_13.events.push(
-  { time: 11, type: 'floorPattern', params: buildFloorPatternParams('checker', 'challenge') },
-  { time: 21, type: 'floorPattern', params: buildFloorPatternParams('radial', 'challenge') },
-  { time: 30, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'challenge', { axis: 'vertical' }) },
-);
-STAGE_14.events.push(
-  { time: 8,  type: 'floorPattern', params: buildFloorPatternParams('radial', 'challenge') },
-  { time: 18, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'challenge', { direction: 'ccw' }) },
-  { time: 27, type: 'floorPattern', params: buildFloorPatternParams('checker', 'challenge') },
-);
+// Challenge group (stages 11-14): duration 40s, count 10 → 평균 ~3.6초 간격
+STAGE_11.events.push(...randomFloorPatternEvents('challenge', { count: 10, endTime: 38 }));
+STAGE_12.events.push(...randomFloorPatternEvents('challenge', { count: 10, endTime: 38 }));
+STAGE_13.events.push(...randomFloorPatternEvents('challenge', { count: 10, endTime: 38 }));
+STAGE_14.events.push(...randomFloorPatternEvents('challenge', { count: 10, endTime: 38 }));
 
-// Hell group (stages 16-19) — + SCATTER
-STAGE_16.events.push(
-  { time: 8,  type: 'floorPattern', params: buildFloorPatternParams('scatter', 'hell') },
-  { time: 18, type: 'floorPattern', params: buildFloorPatternParams('radial', 'hell') },
-  { time: 28, type: 'floorPattern', params: buildFloorPatternParams('checker', 'hell') },
-);
-STAGE_17.events.push(
-  { time: 9,  type: 'floorPattern', params: buildFloorPatternParams('orbit', 'hell') },
-  { time: 19, type: 'floorPattern', params: buildFloorPatternParams('scatter', 'hell') },
-  { time: 28, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'hell') },
-);
-STAGE_18.events.push(
-  { time: 7,  type: 'floorPattern', params: buildFloorPatternParams('radial', 'hell') },
-  { time: 17, type: 'floorPattern', params: buildFloorPatternParams('scatter', 'hell') },
-  { time: 24, type: 'floorPattern', params: buildFloorPatternParams('checker', 'hell') },
-  { time: 32, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'hell') },
-);
-STAGE_19.events.push(
-  { time: 6,  type: 'floorPattern', params: buildFloorPatternParams('scatter', 'hell') },
-  { time: 14, type: 'floorPattern', params: buildFloorPatternParams('radial', 'hell') },
-  { time: 22, type: 'floorPattern', params: buildFloorPatternParams('sweep', 'hell', { lines: 3 }) },
-  { time: 30, type: 'floorPattern', params: buildFloorPatternParams('orbit', 'hell', { direction: 'ccw' }) },
-);
+// Hell group (stages 16-19): duration 45s, count 14 → 평균 ~3초 간격
+STAGE_16.events.push(...randomFloorPatternEvents('hell', { count: 14, endTime: 43 }));
+STAGE_17.events.push(...randomFloorPatternEvents('hell', { count: 14, endTime: 43 }));
+STAGE_18.events.push(...randomFloorPatternEvents('hell', { count: 14, endTime: 43 }));
+STAGE_19.events.push(...randomFloorPatternEvents('hell', { count: 14, endTime: 43 }));
 
 /**
  * Get the pattern for a specific stage
