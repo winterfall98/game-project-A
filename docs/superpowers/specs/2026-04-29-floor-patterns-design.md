@@ -298,3 +298,55 @@ case 'floorPattern': {
 - 난이도 그룹: 1-4 / 6-9 / 11-14 / 16-19
 - 새 패턴은 기존 floor 이벤트를 교체하지 않고 추가만 함
 - 보스 씬은 이번 변경에서 제외
+
+## 튜닝 용이성 (Tunable Constants)
+
+이번 변경의 모든 magic number는 향후 밸런스 조정을 위해 한 곳에서 쉽게
+변경할 수 있도록 정리한다. 구현 규칙:
+
+1. **각 패턴 함수 내부에 magic number를 하드코딩하지 않는다.**
+   모든 수치(기본 count, radius, warningTime, step, gap, thickness 등)는
+   `floorPatterns.js` 상단의 named const 객체에 모은다.
+
+2. **`DEFAULTS` 상수 객체 구조** — 패턴별로 한 블록:
+   ```js
+   const DEFAULTS = {
+     orbit:   { count: 8, radius: 100, floorRadius: 26, step: 120, direction: 'cw',
+                warningTime: 800, activeTime: 600 },
+     sweep:   { axis: 'horizontal', lines: 1, thickness: 50, gap: 80,
+                warningTime: 1200, activeTime: 800, lineDelay: 300 },
+     checker: { cols: 5, rows: 3, phaseDelay: 700, cellInset: 0.8,
+                warningTime: 900, activeTime: 600 },
+     radial:  { rings: 4, innerRadius: 60, ringThickness: 50, step: 250,
+                ringSegmentSpacing: 40,
+                warningTime: 700, activeTime: 500 },
+     scatter: { count: 8, floorRadius: 32, spawnInterval: 80, margin: 60,
+                minDistance: 90, retries: 5,
+                warningTime: 700, activeTime: 500 },
+   };
+   ```
+   각 패턴 함수는 `params`에 들어온 값이 있으면 그것을 쓰고, 없으면
+   `DEFAULTS[patternName]`의 값을 쓰는 식으로 병합 (`{ ...DEFAULTS.x, ...params }`).
+
+3. **난이도 그룹별 강도 조정 값도 별도 const 객체에 모은다** — 예:
+   ```js
+   const DIFFICULTY_TUNING = {
+     tutorial: { orbitCount: 6, sweepLines: 1, ... },
+     growth:   { orbitCount: 8, sweepLines: 2, checkerCols: 5, ... },
+     challenge:{ orbitCount: 8, sweepLines: 3, checkerCols: 6, radialRings: 3, ... },
+     hell:     { orbitCount: 10, sweepLines: 3, checkerCols: 7, radialRings: 5,
+                 scatterCount: 10, ... },
+   };
+   ```
+   stagePatterns.js의 events에서는 이 매핑을 참조해 `params`를 구성하는 헬퍼
+   (예 `floorPatternEvent(time, name, group, overrides)`)를 두면, 스테이지
+   파일이 더 깔끔해진다.
+
+4. **stagePatterns.js의 events에서 직접 `params: { count: 8, radius: 110 }`
+   처럼 숫자를 박지 않는다.** 가능하면 위 헬퍼 또는 그룹/이름만 적고 나머지는
+   기본값에 맡긴다. 정말 스테이지별 특수 조정이 필요한 곳만 `overrides`로 명시.
+
+5. **이름이 의미를 갖도록 한다** — 매직 넘버 80, 0.8 같은 값을 그대로 쓰지 않고
+   `cellInset`, `ringSegmentSpacing` 등 의미 있는 키로 분리.
+
+이 규칙은 향후 "ORBIT을 0.1초 더 빠르게"처럼 한 줄 변경으로 끝나도록 보장한다.
