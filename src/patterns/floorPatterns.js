@@ -110,7 +110,10 @@ export function buildFloorPatternParams(name, group, overrides = {}) {
 }
 
 // ─────────────────────────────────────────────────────────
-// 패턴 함수들 (다음 task부터 구현)
+// 패턴 함수들
+// 모든 함수 시그니처: (scene, floorManager, params) => void
+// 각 함수는 시간차로 floorManager.spawn(...)을 여러 번 호출하여
+// 의도된 회피 기믹을 만든다.
 // ─────────────────────────────────────────────────────────
 
 /** @type {(scene: Phaser.Scene, floorManager: any, params: object) => void} */
