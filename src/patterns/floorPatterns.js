@@ -22,6 +22,7 @@ export const DEFAULTS = {
     floorRadius: 26,     // 각 장판의 반지름(px)
     step: 120,           // 다음 장판 발동까지 시간차(ms)
     direction: 'cw',     // 'cw' | 'ccw'
+    track: false,        // true면 매 spawn마다 player 위치를 다시 읽어 추적 (5스테이지 이후 활성)
     warningTime: 800,
     activeTime: 600,
   },
@@ -30,6 +31,7 @@ export const DEFAULTS = {
     lines: 1,            // 평행선 개수
     thickness: 50,       // 선 두께(px)
     gap: 80,             // 평행선 사이 간격(px)
+    cross: true,         // true면 직교 축 방향으로도 같은 lines 동시 발동(가로+세로)
     warningTime: 1200,
     activeTime: 800,
     lineDelay: 300,      // 선들 사이의 발동 시간차(ms, 0=동시)
@@ -51,6 +53,9 @@ export const DEFAULTS = {
     step: 250,           // ring 사이 발동 시간차(ms)
     ringSegmentSpacing: 40, // ring 둘레의 작은 장판 간 간격
     floorRadius: 22,     // ring 둘레 작은 장판의 반지름
+    miniCount: 0,        // 메인 외 사방 랜덤 위치에 동시 생성할 mini RADIAL 개수
+    miniScale: 0.25,     // mini RADIAL의 반지름/두께 축척 (1/4)
+    miniMargin: 100,     // mini 중심점이 화면 가장자리에서 떨어진 최소 거리(px)
     warningTime: 700,
     activeTime: 500,
   },
@@ -75,22 +80,22 @@ export const DIFFICULTY_TUNING = {
     orbit: { count: 6, step: 150, radius: 110 },
     sweep: { lines: 1, lineDelay: 0, warningTime: 1400 },
   },
-  growth: {    // stages 6-9
-    orbit: { count: 8, step: 130 },
+  growth: {    // stages 6-9 — ORBIT부터 player 추적 시작
+    orbit: { count: 8, step: 130, track: true },
     sweep: { lines: 2, lineDelay: 250 },
     checker: { cols: 5, rows: 3, phaseDelay: 750 },
   },
   challenge: { // stages 11-14
-    orbit: { count: 8, step: 110 },
+    orbit: { count: 8, step: 110, track: true },
     sweep: { lines: 3, lineDelay: 220 },
     checker: { cols: 6, rows: 3, phaseDelay: 700 },
-    radial: { rings: 3, step: 280 },
+    radial: { rings: 3, step: 280, miniCount: 2 },
   },
   hell: {      // stages 16-19
-    orbit: { count: 10, step: 95 },
+    orbit: { count: 10, step: 95, track: true },
     sweep: { lines: 3, lineDelay: 180 },
     checker: { cols: 7, rows: 4, phaseDelay: 600 },
-    radial: { rings: 5, step: 220 },
+    radial: { rings: 5, step: 220, miniCount: 4 },
     scatter: { count: 10, spawnInterval: 70 },
   },
 };
@@ -172,20 +177,28 @@ export function randomFloorPatternEvents(group, options) {
 export function orbit(scene, floorManager, params) {
   const cfg = { ...DEFAULTS.orbit, ...params };
 
-  // 호출 시점의 플레이어 위치를 캡쳐 (이후 추적하지 않음)
   const player = scene.player;
-  const cx = player ? player.x : GAME_WIDTH / 2;
-  const cy = player ? player.y : GAME_HEIGHT / 2;
-
+  // track=false: 호출 시점 player 위치를 한 번만 캡쳐 (튜토리얼 동작)
+  // track=true:  매 spawn마다 그 시점의 player 위치를 다시 읽음 (5스테이지 이후)
   const sign = cfg.direction === 'ccw' ? -1 : 1;
   const angleStep = (Math.PI * 2) / cfg.count;
 
+  // track 모드일 때 spawn 시점에 player 위치를 다시 읽기 위한 헬퍼
+  const readCenter = () => {
+    if (player && player.isAlive) return { x: player.x, y: player.y };
+    return { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 };
+  };
+
+  // 캡쳐 모드: 한 번만 읽고 고정
+  const captured = readCenter();
+
   for (let i = 0; i < cfg.count; i++) {
     const angle = sign * angleStep * i;
-    const x = cx + Math.cos(angle) * cfg.radius;
-    const y = cy + Math.sin(angle) * cfg.radius;
 
     scene.time.delayedCall(cfg.step * i, () => {
+      const { x: cx, y: cy } = cfg.track ? readCenter() : captured;
+      const x = cx + Math.cos(angle) * cfg.radius;
+      const y = cy + Math.sin(angle) * cfg.radius;
       floorManager.spawn({
         x, y,
         width: cfg.floorRadius * 2,
@@ -201,51 +214,55 @@ export function orbit(scene, floorManager, params) {
 
 export function sweep(scene, floorManager, params) {
   const cfg = { ...DEFAULTS.sweep, ...params };
-  const horizontal = cfg.axis === 'horizontal';
 
-  // 평행선의 중심선 좌표 계산
-  // lines=1: 화면 중앙 한 줄
-  // lines=2: 중심에서 ±gap/2
-  // lines=3: 중심 + ±gap
-  const centers = [];
-  if (cfg.lines === 1) {
-    centers.push(horizontal ? GAME_HEIGHT / 2 : GAME_WIDTH / 2);
-  } else {
-    const baseAxisLen = horizontal ? GAME_HEIGHT : GAME_WIDTH;
-    const center = baseAxisLen / 2;
-    const totalSpan = (cfg.lines - 1) * cfg.gap;
-    const start = center - totalSpan / 2;
-    for (let i = 0; i < cfg.lines; i++) {
-      centers.push(start + cfg.gap * i);
+  // 한 축에 대해 평행선들을 spawn
+  const spawnAxis = (axis) => {
+    const horizontal = axis === 'horizontal';
+    const centers = [];
+    if (cfg.lines === 1) {
+      centers.push(horizontal ? GAME_HEIGHT / 2 : GAME_WIDTH / 2);
+    } else {
+      const baseAxisLen = horizontal ? GAME_HEIGHT : GAME_WIDTH;
+      const center = baseAxisLen / 2;
+      const totalSpan = (cfg.lines - 1) * cfg.gap;
+      const start = center - totalSpan / 2;
+      for (let i = 0; i < cfg.lines; i++) {
+        centers.push(start + cfg.gap * i);
+      }
     }
-  }
 
-  // 각 선을 시간차로 spawn
-  centers.forEach((centerCoord, i) => {
-    scene.time.delayedCall(cfg.lineDelay * i, () => {
-      const sweepParams = horizontal
-        ? {
-            x: GAME_WIDTH / 2,
-            y: centerCoord,
-            width: GAME_WIDTH,
-            height: cfg.thickness,
-          }
-        : {
-            x: centerCoord,
-            y: GAME_HEIGHT / 2,
-            width: cfg.thickness,
-            height: GAME_HEIGHT,
-          };
+    centers.forEach((centerCoord, i) => {
+      scene.time.delayedCall(cfg.lineDelay * i, () => {
+        const sweepParams = horizontal
+          ? {
+              x: GAME_WIDTH / 2,
+              y: centerCoord,
+              width: GAME_WIDTH,
+              height: cfg.thickness,
+            }
+          : {
+              x: centerCoord,
+              y: GAME_HEIGHT / 2,
+              width: cfg.thickness,
+              height: GAME_HEIGHT,
+            };
 
-      floorManager.spawn({
-        ...sweepParams,
-        shape: 'rect',
-        variant: 'normal',
-        warningTime: cfg.warningTime,
-        activeTime: cfg.activeTime,
+        floorManager.spawn({
+          ...sweepParams,
+          shape: 'rect',
+          variant: 'normal',
+          warningTime: cfg.warningTime,
+          activeTime: cfg.activeTime,
+        });
       });
     });
-  });
+  };
+
+  spawnAxis(cfg.axis);
+  if (cfg.cross) {
+    // 직교 축으로도 같은 lines 동시에 — 1선이면 +자, 2선이면 #자
+    spawnAxis(cfg.axis === 'horizontal' ? 'vertical' : 'horizontal');
+  }
 }
 
 export function checker(scene, floorManager, params) {
@@ -295,25 +312,48 @@ export function checker(scene, floorManager, params) {
 export function radial(scene, floorManager, params) {
   const cfg = { ...DEFAULTS.radial, ...params };
 
+  // 메인 RADIAL — 지정 중심점에서 풀 사이즈
+  _spawnRadialRings(scene, floorManager, cfg, cfg.centerX, cfg.centerY, 1);
+
+  // mini RADIAL — 사방 랜덤 위치에 1/4 크기로 동시다발 (challenge/hell 그룹에서 활성)
+  const miniCount = cfg.miniCount || 0;
+  if (miniCount <= 0) return;
+  const scale = cfg.miniScale;
+  const margin = cfg.miniMargin;
+  for (let i = 0; i < miniCount; i++) {
+    const mx = Phaser.Math.Between(margin, GAME_WIDTH - margin);
+    const my = Phaser.Math.Between(margin, GAME_HEIGHT - margin);
+    _spawnRadialRings(scene, floorManager, cfg, mx, my, scale);
+  }
+}
+
+/**
+ * RADIAL ring들을 한 중심점 기준으로 spawn하는 내부 헬퍼.
+ * scale은 반지름/두께/장판 크기/segment 간격에 일괄 적용된다.
+ */
+function _spawnRadialRings(scene, floorManager, cfg, cx, cy, scale) {
+  const innerRadius = cfg.innerRadius * scale;
+  const ringThickness = cfg.ringThickness * scale;
+  const segSpacing = cfg.ringSegmentSpacing * scale;
+  const floorRadius = cfg.floorRadius * scale;
+
   for (let r = 0; r < cfg.rings; r++) {
-    const ringRadius = cfg.innerRadius + cfg.ringThickness * r;
+    const ringRadius = innerRadius + ringThickness * r;
     const circumference = 2 * Math.PI * ringRadius;
-    // ring 둘레에 작은 장판 배치 (ringSegmentSpacing 간격)
-    const segCount = Math.max(6, Math.ceil(circumference / cfg.ringSegmentSpacing));
+    const segCount = Math.max(6, Math.ceil(circumference / segSpacing));
     const angleStep = (Math.PI * 2) / segCount;
 
     scene.time.delayedCall(cfg.step * r, () => {
       for (let i = 0; i < segCount; i++) {
         const angle = angleStep * i;
-        const x = cfg.centerX + Math.cos(angle) * ringRadius;
-        const y = cfg.centerY + Math.sin(angle) * ringRadius;
-        // 화면 밖으로 나간 segment는 skip (성능 + 시각 정리)
+        const x = cx + Math.cos(angle) * ringRadius;
+        const y = cy + Math.sin(angle) * ringRadius;
         if (x < -50 || x > GAME_WIDTH + 50 || y < -50 || y > GAME_HEIGHT + 50) continue;
 
         floorManager.spawn({
           x, y,
-          width: cfg.floorRadius * 2,
-          height: cfg.floorRadius * 2,
+          width: floorRadius * 2,
+          height: floorRadius * 2,
           shape: 'circle',
           variant: 'normal',
           warningTime: cfg.warningTime,
