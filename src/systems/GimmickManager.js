@@ -29,20 +29,19 @@ export default class GimmickManager {
   /**
    * 스테이지 패턴 로드 및 실행
    * @param {object} patternData - 스테이지 패턴 JSON
-   * @param {string} mode - 'easy' | 'normal'
+   * @param {string} mode - 'normal' (EASY 모드 삭제됨, 호환성 유지를 위한 인자)
    */
   startPattern(patternData, mode = 'normal') {
     this.gameMode = mode;
     this.isRunning = true;
     this.elapsedTime = 0;
 
-    // 이지 모드 변환 또는 노말 모드 증폭
-    let events;
-    if (mode === 'easy') {
-      events = this._convertToEasy(patternData.events);
-    } else {
-      events = this._amplifyPattern(patternData.events, patternData.stage || 1, patternData.duration || 30);
-    }
+    // 노말 모드 증폭 (EASY 모드 삭제됨 — 이전 _convertToEasy 분기 제거)
+    const events = this._amplifyPattern(
+      patternData.events,
+      patternData.stage || 1,
+      patternData.duration || 30,
+    );
 
     // 이벤트 스케줄링
     events.forEach((event) => {
@@ -110,10 +109,8 @@ export default class GimmickManager {
   /**
    * 캐릭터 주변 랜덤 위치로 파라미터를 변환
    * 캐릭터 정중앙도 가능 (순발력 요구)
-   * 이지 모드에서는 적용하지 않음
    */
   _randomizeParams(type, params) {
-    if (this.gameMode === 'easy') return params;
     const player = this.scene.player;
     if (!player || !player.isAlive) return params;
 
@@ -174,55 +171,6 @@ export default class GimmickManager {
       // QTE는 위치 무관
     }
     return params;
-  }
-
-  /**
-   * 이지 모드 변환
-   * - 탄환 count ×0.5
-   * - 장판 동시 개수 제한 (최대 2)
-   * - 레이저 꺾임 제거 (직선만)
-   * - QTE 시퀀스 3개 고정, QWER만
-   */
-  _convertToEasy(events) {
-    let floorCount = 0;
-
-    return events
-      .map((event) => {
-        const e = { ...event, params: { ...event.params } };
-
-        switch (e.type) {
-          case 'bullet':
-            e.params.count = Math.max(1, Math.round((e.params.count || 5) * 0.5));
-            e.params.speed = (e.params.speed || 200) * 0.8;
-            break;
-
-          case 'floor':
-            floorCount++;
-            if (floorCount > 2) return null; // 동시 2개 제한
-            break;
-
-          case 'floorPattern':
-            // easy 모드에서는 복합 패턴 제거 (난이도 단순화)
-            return null;
-
-          case 'laser':
-            // 꺾임 제거 → 직선으로 변환
-            if (e.params.bendX !== undefined) {
-              delete e.params.bendX;
-              delete e.params.bendY;
-            }
-            e.params.warningTime = (e.params.warningTime || 1000) * 1.3;
-            break;
-
-          case 'qte':
-            e.params.sequence = ['Q', 'W', 'E']; // 3개 고정, QWER만
-            e.params.timing = (e.params.timing || 1500) * 1.2; // 타이밍 여유
-            break;
-        }
-
-        return e;
-      })
-      .filter(Boolean);
   }
 
   /**

@@ -63,9 +63,8 @@ export const STAGE = {
   DURATION_MAX: 50,         // 최대 스테이지 시간 (초)
 };
 
-// 모드
+// 모드 (EASY 모드는 삭제되어 NORMAL 단일 운용)
 export const MODE = {
-  EASY: 'easy',
   NORMAL: 'normal',
 };
 

@@ -17,33 +17,17 @@ export function initUI() {
     // QA 스테이지 셀렉트 삽입
     _createStageSelect();
 
-    // 게임 시작 버튼
-    document.getElementById('btn-start').addEventListener('click', () => {
-      document.getElementById('mode-select-popup').style.display = 'flex';
-    });
-
     // 선택된 스테이지 번호를 반환
     function getSelectedStage() {
       const sel = document.getElementById('qa-stage-select');
       return sel ? parseInt(sel.value, 10) : 1;
     }
 
-    // 모드 선택: 이지
-    document.getElementById('btn-easy').addEventListener('click', () => {
-      closeModePopup();
-      const currentSettings = loadSettings();
-      window.startGame('easy', currentSettings, getSelectedStage());
-    });
-
-    // 모드 선택: 노말
-    document.getElementById('btn-normal').addEventListener('click', () => {
-      closeModePopup();
+    // 게임 시작 — normal 모드 단일 (EASY 모드 삭제됨)
+    document.getElementById('btn-start').addEventListener('click', () => {
       const currentSettings = loadSettings();
       window.startGame('normal', currentSettings, getSelectedStage());
     });
-
-    // 모드 선택 팝업 닫기
-    document.getElementById('btn-mode-cancel').addEventListener('click', closeModePopup);
 
     // 옵션 버튼
     document.getElementById('btn-options').addEventListener('click', () => {
@@ -97,10 +81,6 @@ function _createStageSelect() {
   wrapper.appendChild(label);
   wrapper.appendChild(select);
   intro.appendChild(wrapper);
-}
-
-function closeModePopup() {
-  document.getElementById('mode-select-popup').style.display = 'none';
 }
 
 function applySettingsToUI(settings) {

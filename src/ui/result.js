@@ -45,17 +45,16 @@ export function showResultScreen(data) {
 
       <!-- Stats -->
       <div class="result-stats">
-        <div class="stat-row"><span class="stat-label">Max Combo</span><span class="stat-value">${data.maxCombo || 0}</span></div>
+        <div class="stat-row"><span class="stat-label">QTE Max Combo</span><span class="stat-value">${data.maxCombo || 0}</span></div>
         <div class="stat-row"><span class="stat-label">QTE Accuracy</span><span class="stat-value">${data.accuracy || 0}%</span></div>
         <div class="stat-row"><span class="stat-label">Great / Good / Fail</span><span class="stat-value">${data.totalGreat || 0} / ${data.totalGood || 0} / ${data.totalFail || 0}</span></div>
-        <div class="stat-row"><span class="stat-label">Dodged</span><span class="stat-value">${(data.bulletsDodged || 0) + (data.lasersDodged || 0) + (data.floorsDodged || 0)}</span></div>
+        <div class="stat-row"><span class="stat-label">Remaining HP</span><span class="stat-value">${data.remainingHP || 0}</span></div>
         ${data.noDamageStages > 0 ? `<div class="stat-row"><span class="stat-label">No-Damage Stages</span><span class="stat-value">${data.noDamageStages}</span></div>` : ''}
       </div>
 
       <!-- Score Breakdown -->
       <div class="result-breakdown">
         <div class="breakdown-row"><span>Survival</span><span>${data.survivalScore || 0}</span></div>
-        <div class="breakdown-row"><span>Dodge</span><span>${data.dodgeScore || 0}</span></div>
         <div class="breakdown-row"><span>QTE</span><span>${data.qteScore || 0}</span></div>
         <div class="breakdown-row"><span>Clear Bonus</span><span>${data.stageClearScore || 0}</span></div>
         ${data.bossKillScore > 0 ? `<div class="breakdown-row"><span>Boss Kill</span><span>${data.bossKillScore}</span></div>` : ''}

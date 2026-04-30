@@ -169,43 +169,7 @@ body {
   margin-bottom: 24px;
 }
 
-.mode-buttons {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.btn-mode {
-  padding: 16px 36px;
-  font-size: 16px;
-  font-weight: 700;
-  border: 2px solid;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  background: transparent;
-}
-
-.btn-easy {
-  border-color: #66bb6a;
-  color: #66bb6a;
-}
-
-.btn-easy:hover {
-  background: rgba(102, 187, 106, 0.15);
-  box-shadow: 0 0 15px rgba(102, 187, 106, 0.3);
-}
-
-.btn-normal {
-  border-color: #ff7043;
-  color: #ff7043;
-}
-
-.btn-normal:hover {
-  background: rgba(255, 112, 67, 0.15);
-  box-shadow: 0 0 15px rgba(255, 112, 67, 0.3);
-}
+/* mode-select-popup 관련 스타일은 EASY 모드 삭제와 함께 제거됨 */
 
 .btn-cancel {
   background: transparent;

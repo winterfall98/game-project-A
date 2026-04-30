@@ -26,10 +26,9 @@ export default class UIScene extends Phaser.Scene {
 
   create() {
     // === Top-left info ===
-    const modeText = this.gameMode === 'easy' ? 'EASY' : 'NORMAL';
     const stageLabel = this.isBoss ? 'BOSS' : 'STAGE';
 
-    this.stageText = this.add.text(16, 12, `${modeText} | ${stageLabel} ${this.currentStage}`, {
+    this.stageText = this.add.text(16, 12, `${stageLabel} ${this.currentStage}`, {
       fontFamily: 'monospace', fontSize: '16px', color: '#ffffff',
     });
 

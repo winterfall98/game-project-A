@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { COLORS, QTE, GAME_WIDTH, GAME_HEIGHT } from '../constants/game.js';
-import { QTE_KEYS_ARROWS, QTE_KEYS_EASY, KEY_DISPLAY_NAMES } from '../constants/keys.js';
+import { QTE_KEYS_ARROWS, QTE_KEYS_WASD, KEY_DISPLAY_NAMES } from '../constants/keys.js';
 
 /**
  * QTEManager
@@ -37,7 +37,7 @@ export default class QTEManager {
 
     // ── 키 입력 바인딩 ──
     this._boundKeyHandler = null;
-    this._boundMouseHandler = null;
+    this._boundKeyObj = null;
   }
 
   /**
@@ -221,32 +221,20 @@ export default class QTEManager {
   // ═══════════════════════════════════════
 
   /**
-   * QTE 키 입력 바인딩
+   * QTE 키 입력 바인딩.
+   * arrows / wasd 모두 키보드를 사용한다 (WASD 모드는 키보드 오른쪽 영역의 12개 키 사용).
    */
   _bindInput(expectedKey) {
     this._unbindInput();
 
-    if (this.controlMode === 'wasd') {
-      // 마우스 모드
-      this._boundMouseHandler = (pointer) => {
-        const buttonMap = { 0: 'LEFT', 1: 'MIDDLE', 2: 'RIGHT' };
-        const pressed = buttonMap[pointer.button];
-        if (pressed === expectedKey) {
-          this._onQTEInput();
-        }
+    const keyCode = Phaser.Input.Keyboard.KeyCodes[expectedKey];
+    if (keyCode) {
+      const keyObj = this.scene.input.keyboard.addKey(keyCode);
+      this._boundKeyHandler = () => {
+        this._onQTEInput();
       };
-      this.scene.input.on('pointerdown', this._boundMouseHandler);
-    } else {
-      // 키보드 모드
-      const keyCode = Phaser.Input.Keyboard.KeyCodes[expectedKey];
-      if (keyCode) {
-        const keyObj = this.scene.input.keyboard.addKey(keyCode);
-        this._boundKeyHandler = () => {
-          this._onQTEInput();
-        };
-        keyObj.once('down', this._boundKeyHandler);
-        this._boundKeyObj = keyObj;
-      }
+      keyObj.once('down', this._boundKeyHandler);
+      this._boundKeyObj = keyObj;
     }
   }
 
@@ -254,10 +242,6 @@ export default class QTEManager {
    * 입력 바인딩 해제
    */
   _unbindInput() {
-    if (this._boundMouseHandler) {
-      this.scene.input.off('pointerdown', this._boundMouseHandler);
-      this._boundMouseHandler = null;
-    }
     if (this._boundKeyObj) {
       this._boundKeyObj.off('down', this._boundKeyHandler);
       this._boundKeyObj = null;
@@ -446,21 +430,29 @@ export default class QTEManager {
     this.bombs--;
     this.scene.events.emit('updateBombs', { count: this.bombs });
 
-    // 화면 플래시
-    const flash = this.scene.add.rectangle(
-      GAME_WIDTH / 2, GAME_HEIGHT / 2,
-      GAME_WIDTH, GAME_HEIGHT,
-      0xffffff, 0.8
-    );
+    // 부드러운 청록 ring 효과 — 흰 강렬 플래시 대신 외곽으로 퍼지는 ring으로 교체
+    // (눈에 부담을 주지 않는 선의 가시성 확보)
+    const ring = this.scene.add.graphics();
+    ring.setDepth(150);
+    const startR = 40;
+    const endR = Math.max(GAME_WIDTH, GAME_HEIGHT);
+    const ringState = { r: startR, alpha: 0.55 };
     this.scene.tweens.add({
-      targets: flash,
+      targets: ringState,
+      r: endR,
       alpha: 0,
-      duration: 500,
-      onComplete: () => flash.destroy(),
+      duration: 550,
+      ease: 'Quad.easeOut',
+      onUpdate: () => {
+        ring.clear();
+        ring.lineStyle(6, 0x4fc3f7, ringState.alpha);
+        ring.strokeCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2, ringState.r);
+      },
+      onComplete: () => ring.destroy(),
     });
 
-    // 카메라 셰이크
-    this.scene.cameras.main.shake(300, 0.02);
+    // 카메라 셰이크는 약하게
+    this.scene.cameras.main.shake(180, 0.008);
 
     // 기믹 제거 콜백
     if (clearAllGimmicks) clearAllGimmicks();
@@ -497,34 +489,31 @@ export default class QTEManager {
    * @returns {Array<object>} [{key, timing}, ...]
    */
   generateRandomSequence(count, timing = 1500) {
-    const keyPool = this.gameMode === 'easy' ? QTE_KEYS_EASY : QTE_KEYS_ARROWS;
-
-    if (this.controlMode === 'wasd') {
-      // WASD 모드: 마우스 버튼
-      const mouseKeys = ['LEFT', 'RIGHT'];
-      const seq = [];
-      let middleUsed = false;
-
-      for (let i = 0; i < count; i++) {
-        let key;
-        if (!middleUsed && Math.random() < 0.2 && i > 0) {
-          key = 'MIDDLE';
-          middleUsed = true; // 시퀀스당 최대 1회
-        } else {
-          key = mouseKeys[Math.floor(Math.random() * mouseKeys.length)];
-        }
-        seq.push({ key, timing });
-      }
-      return seq;
-    }
-
-    // 키보드 모드
+    // arrows / wasd 모두 키보드 풀에서 추첨 (WASD는 오른손 영역 12개)
+    const keyPool = this.controlMode === 'wasd' ? QTE_KEYS_WASD : QTE_KEYS_ARROWS;
     const seq = [];
     for (let i = 0; i < count; i++) {
       const key = keyPool[Math.floor(Math.random() * keyPool.length)];
       seq.push({ key, timing });
     }
     return seq;
+  }
+
+  /**
+   * 진행 중인 QTE를 즉시 취소.
+   * 활성 시퀀스가 있으면 시각/입력/타이머/큐를 모두 정리하고 isActive를 false로 만든다.
+   * 스테이지 클리어/사망 시점에 호출하여 QTE 프롬프트가 다음 씬으로 잔류하지 않도록 한다.
+   */
+  cancel() {
+    if (this.currentQTE) {
+      if (this.currentQTE.bandTween) this.currentQTE.bandTween.stop();
+      this._clearCurrentQTE();
+    }
+    this._unbindInput();
+    this.queue = [];
+    this.isActive = false;
+    this._sequenceResults = null;
+    this._onSequenceComplete = null;
   }
 
   /**
