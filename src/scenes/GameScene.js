@@ -104,6 +104,8 @@ export default class GameScene extends Phaser.Scene {
     this.stageCleared = true;
     this.gimmickManager.stop();
     this.gimmickManager.clearAllGimmicks();
+    // 진행 중인 QTE가 있으면 즉시 취소 — 다음 씬으로 잔류 방지
+    if (this.qteManager) this.qteManager.cancel();
     if (this._countdownTimer) this._countdownTimer.remove(false);
     this.scoreManager.stopSurvivalTimer();
     this.scoreManager.onStageClear(this.currentStage);
@@ -154,7 +156,7 @@ export default class GameScene extends Phaser.Scene {
   _goNext() {
     var next = this.currentStage + 1;
     if (next > STAGE.TOTAL) {
-      this.game.events.emit('gameEnd', this.scoreManager.getResultData(this.currentStage, this.gameMode, 'clear'));
+      this.game.events.emit('gameEnd', this.scoreManager.getResultData(this.currentStage, this.gameMode, 'clear', this.player ? this.player.hp : 0));
       return;
     }
     this.cameras.main.fadeOut(300, 0, 0, 0);
@@ -162,13 +164,10 @@ export default class GameScene extends Phaser.Scene {
       var sd = { mode:this.gameMode, controlMode:this.controlMode, dodgeKey:this.dodgeKey,
         stage:next, playerHP:this.player.hp, totalScore:this.totalScore };
       if (STAGE.BOSS_STAGES.includes(next)) {
-        if (this.gameMode === 'easy') { sd.stage = next + 1; }
-        if (sd.stage > STAGE.TOTAL) {
-          this.game.events.emit('gameEnd', this.scoreManager.getResultData(this.currentStage, this.gameMode, 'clear'));
-          return;
-        }
-        this.scene.start(this.gameMode === 'easy' ? 'GameScene' : 'BossScene', sd);
-      } else { this.scene.start('GameScene', sd); }
+        this.scene.start('BossScene', sd);
+      } else {
+        this.scene.start('GameScene', sd);
+      }
     }, this);
   }
 
@@ -177,7 +176,7 @@ export default class GameScene extends Phaser.Scene {
     this.scoreManager.stopSurvivalTimer();
     if (this._countdownTimer) this._countdownTimer.remove(false);
     this.time.delayedCall(1500, function() {
-      this.game.events.emit('gameEnd', this.scoreManager.getResultData(this.currentStage, this.gameMode, 'death'));
+      this.game.events.emit('gameEnd', this.scoreManager.getResultData(this.currentStage, this.gameMode, 'death', this.player ? this.player.hp : 0));
     }, [], this);
   }
 

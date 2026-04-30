@@ -47,7 +47,7 @@ function setupComm(game) {
     document.getElementById('result-screen').style.display = 'none';
     document.getElementById('game-container').style.display = 'block';
     var sceneData = { mode: mode, controlMode: settings.controlMode, dodgeKey: settings.dodgeKey, stage: stage };
-    if (STAGE.BOSS_STAGES.includes(stage) && mode !== 'easy') {
+    if (STAGE.BOSS_STAGES.includes(stage)) {
       game.scene.start('BossScene', sceneData);
     } else {
       game.scene.start('GameScene', sceneData);

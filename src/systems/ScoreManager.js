@@ -246,8 +246,12 @@ export default class ScoreManager {
 
   /**
    * Get full result data for result screen
+   * @param {number} stageReached
+   * @param {string} mode
+   * @param {string} reason - 'death' | 'clear'
+   * @param {number} [remainingHP=0] - 게임 종료 시점의 플레이어 HP
    */
-  getResultData(stageReached, mode, reason) {
+  getResultData(stageReached, mode, reason, remainingHP = 0) {
     return {
       reason,
       mode,
@@ -265,12 +269,9 @@ export default class ScoreManager {
       totalGreat: this.totalGreat,
       totalGood: this.totalGood,
       totalFail: this.totalFail,
-      bulletsDodged: this.bulletsDodged,
-      lasersDodged: this.lasersDodged,
-      floorsDodged: this.floorsDodged,
+      remainingHP,
       // Breakdown
       survivalScore: this.survivalScore,
-      dodgeScore: this.bulletDodgeScore + this.laserDodgeScore + this.floorDodgeScore,
       qteScore: this.qteScore,
       stageClearScore: this.stageClearScore,
       bossKillScore: this.bossKillScore,
