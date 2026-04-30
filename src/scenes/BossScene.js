@@ -553,7 +553,7 @@ export default class BossScene extends Phaser.Scene {
     });
     this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    this.bombKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+    this.bombKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Y);
     this.pauseKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F10);
     this.pauseKey.on('down', this._togglePause, this);
     this.input.mouse.disableContextMenu();
@@ -586,6 +586,10 @@ export default class BossScene extends Phaser.Scene {
           this.laserManager.clearAll();
           this.bulletManager.clearAll();
           this.floorManager.clearAll();
+          // 보스는 사라지지 않지만, QTE 1회 분량 데미지를 입힘
+          if (this.boss && this.boss.isAlive) {
+            this.boss.takeDamage(this.bossConfig.qteDamage || 0);
+          }
         });
       }
     }

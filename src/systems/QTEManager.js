@@ -430,21 +430,29 @@ export default class QTEManager {
     this.bombs--;
     this.scene.events.emit('updateBombs', { count: this.bombs });
 
-    // 화면 플래시
-    const flash = this.scene.add.rectangle(
-      GAME_WIDTH / 2, GAME_HEIGHT / 2,
-      GAME_WIDTH, GAME_HEIGHT,
-      0xffffff, 0.8
-    );
+    // 부드러운 청록 ring 효과 — 흰 강렬 플래시 대신 외곽으로 퍼지는 ring으로 교체
+    // (눈에 부담을 주지 않는 선의 가시성 확보)
+    const ring = this.scene.add.graphics();
+    ring.setDepth(150);
+    const startR = 40;
+    const endR = Math.max(GAME_WIDTH, GAME_HEIGHT);
+    const ringState = { r: startR, alpha: 0.55 };
     this.scene.tweens.add({
-      targets: flash,
+      targets: ringState,
+      r: endR,
       alpha: 0,
-      duration: 500,
-      onComplete: () => flash.destroy(),
+      duration: 550,
+      ease: 'Quad.easeOut',
+      onUpdate: () => {
+        ring.clear();
+        ring.lineStyle(6, 0x4fc3f7, ringState.alpha);
+        ring.strokeCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2, ringState.r);
+      },
+      onComplete: () => ring.destroy(),
     });
 
-    // 카메라 셰이크
-    this.scene.cameras.main.shake(300, 0.02);
+    // 카메라 셰이크는 약하게
+    this.scene.cameras.main.shake(180, 0.008);
 
     // 기믹 제거 콜백
     if (clearAllGimmicks) clearAllGimmicks();
