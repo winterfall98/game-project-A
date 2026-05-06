@@ -14,6 +14,7 @@ export default class UIScene extends Phaser.Scene {
     this.gameMode = data.mode || 'normal';
     this.currentStage = data.stage || 1;
     this.isBoss = data.isBoss || false;
+    this.mobileMode = data.mobileMode || false;
     // Phaser 자동 등록에 의존하지 않고 명시적으로 shutdown 핸들러 등록
     this.events.once('shutdown', this._onShutdown, this);
   }
@@ -204,8 +205,10 @@ export default class UIScene extends Phaser.Scene {
     const btnX = GAME_WIDTH - 60;
     const btnY = 14;
 
-    // 배경 박스
-    const bg = this.add.rectangle(btnX + 28, btnY + 12, 72, 28, 0x000000, 0.4)
+    // 배경 박스 — mobile: minimum 44x44 tap target (Apple HIG)
+    const bgW = this.mobileMode ? Math.max(72, 44) : 72;
+    const bgH = this.mobileMode ? Math.max(28, 44) : 28;
+    const bg = this.add.rectangle(btnX + 28, btnY + bgH / 2, bgW, bgH, 0x000000, 0.4)
       .setOrigin(0.5).setDepth(90).setInteractive({ useHandCursor: true });
 
     // || 아이콘 (두 줄 바)
