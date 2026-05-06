@@ -18,7 +18,8 @@ var config = {
 };
 
 var game = new Phaser.Game(config);
-var session = { mode: 'normal', controlMode: 'arrows', dodgeKey: 'SHIFT' };
+game.input.addPointer(2);
+var session = { mode: 'normal', controlMode: 'arrows', dodgeKey: 'SHIFT', mobileMode: false, touchControlScale: 1.0 };
 
 function setupComm(game) {
   game.events.on('gameReady', function() {
@@ -32,6 +33,7 @@ function setupComm(game) {
     game.scene.stop('UIScene');
     game.scene.start('GameScene', {
       mode: session.mode, controlMode: session.controlMode, dodgeKey: session.dodgeKey,
+      mobileMode: session.mobileMode, touchControlScale: session.touchControlScale,
       stage: next, playerHP: data.playerHP || 100, totalScore: data.score || 0,
     });
   });
@@ -42,11 +44,16 @@ function setupComm(game) {
   });
   window.startGame = function(mode, settings, startStage) {
     var stage = startStage || 1;
-    session = { mode: mode, controlMode: settings.controlMode, dodgeKey: settings.dodgeKey };
+    session = { mode: mode, controlMode: settings.controlMode, dodgeKey: settings.dodgeKey, mobileMode: false, touchControlScale: 1.0 };
+    const mobileSetting = settings.mobileMode;
+    session.mobileMode = mobileSetting !== null && mobileSetting !== undefined
+      ? mobileSetting
+      : (navigator.maxTouchPoints > 0);
+    session.touchControlScale = settings.touchControlScale || 1.0;
     document.getElementById('intro-screen').style.display = 'none';
     document.getElementById('result-screen').style.display = 'none';
     document.getElementById('game-container').style.display = 'block';
-    var sceneData = { mode: mode, controlMode: settings.controlMode, dodgeKey: settings.dodgeKey, stage: stage };
+    var sceneData = { mode: mode, controlMode: settings.controlMode, dodgeKey: settings.dodgeKey, mobileMode: session.mobileMode, touchControlScale: session.touchControlScale, stage: stage };
     if (STAGE.BOSS_STAGES.includes(stage)) {
       game.scene.start('BossScene', sceneData);
     } else {
