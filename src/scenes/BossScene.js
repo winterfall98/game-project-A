@@ -61,7 +61,7 @@ export default class BossScene extends Phaser.Scene {
     this.bulletManager = new BulletManager(this, this.player);
     this.floorManager = new FloorManager(this);
     this.qteManager = new QTEManager(this, this.player);
-    this.qteManager.configure(this.controlMode, this.gameMode);
+    this.qteManager.configure(this.controlMode, this.gameMode, this.mobileMode);
 
     // Bullet overlap
     this.bulletManager.setupOverlap(this.player, (player) => {
@@ -729,6 +729,9 @@ export default class BossScene extends Phaser.Scene {
     if (this._qteTimer) this._qteTimer.remove(false);
     if (this._countdownTimer) this._countdownTimer.remove(false);
     if (this._floorPatternTimer) this._floorPatternTimer.remove(false);
-    if (this.qteManager) this.qteManager.destroy();
+    if (this.qteManager) {
+      this.qteManager.cancel();
+      this.qteManager.destroy();
+    }
   }
 }

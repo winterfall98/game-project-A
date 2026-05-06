@@ -14,11 +14,10 @@ var config = {
   physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, min: { width: 400, height: 300 } },
   scene: [BootScene, GameScene, BossScene, UIScene, PauseScene],
-  callbacks: { postBoot: function(game) { setupComm(game); } },
+  callbacks: { postBoot: function(game) { game.input.addPointer(2); setupComm(game); } },
 };
 
 var game = new Phaser.Game(config);
-game.input.addPointer(2);
 var session = { mode: 'normal', controlMode: 'arrows', dodgeKey: 'SHIFT', mobileMode: false, touchControlScale: 1.0 };
 
 function setupComm(game) {

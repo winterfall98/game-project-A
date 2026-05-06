@@ -300,7 +300,11 @@ export default class TouchControls {
   _onPointerUp(pointer) {
     if (pointer.id === this.joystickPointerId) {
       this._resetJoystick();
+      return;
     }
+    // Reset button press state on lift
+    this.dashPressed = false;
+    this.bombPressed = false;
   }
 
   // ═══════════════════════════════════════
