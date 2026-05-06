@@ -35,7 +35,8 @@ src/
 │   ├── BulletManager.js        # 탄환 오브젝트 풀, 발사 패턴 엔진
 │   ├── LaserManager.js         # 레이저 라이프사이클 (경고→실체화→소멸)
 │   ├── FloorManager.js         # 바닥 장판 라이프사이클 (경고→발동→소멸)
-│   └── ScoreManager.js         # 점수 누적, 배율, 등급 계산
+│   ├── ScoreManager.js         # 점수 누적, 배율, 등급 계산
+│   └── TouchControls.js        # 모바일 터치 컨트롤 (조이스틱, 대쉬/폭탄 버튼)
 │
 ├── scenes/
 │   ├── BootScene.js            # 부팅 씬 (gameReady 이벤트 발신)
@@ -327,6 +328,18 @@ arrows 모드에서 이동은 화살표 키, QTE는 왼손 키보드 12개(Q/W/E
 
 공통 조작으로, 폭탄은 **Y 키**, 일시정지는 F10 키 또는 우상단 버튼 클릭이다.
 
+### 모바일 터치 컨트롤
+
+모바일 모드가 활성화되면 화면에 터치 컨트롤이 오버레이된다. 모바일 감지는 `navigator.maxTouchPoints`로 자동 수행되며, 인트로 옵션에서 수동으로 켜고 끌 수 있다.
+
+가상 조이스틱은 화면 왼쪽 하단에 위치하며, 드래그로 아날로그 방향 이동을 지원한다. 현재 이동 방향에 해당하는 화살표가 밝게 표시된다. 대쉬 버튼은 오른쪽 하단에 큰 원형으로, 폭탄 버튼은 대쉬 버튼 우상단에 절반 크기로 배치된다. 스태미나 부족 시 대쉬 버튼이, 폭탄 0개일 때 폭탄 버튼이 각각 비활성 표시된다.
+
+QTE는 프롬프트를 직접 탭하는 방식이다. 프롬프트는 플레이어 근처(반경 60~100px)에 표시되되 화면 하단 25%(컨트롤 영역)와 겹치면 위쪽으로 밀어낸다. 판정 임계치(Great/Good/Fail)는 PC와 동일하다.
+
+컨트롤 크기는 0.7~1.3 배율로 인트로 옵션에서 조절 가능하다. 멀티터치를 지원하여 이동 중 대쉬, 이동 중 QTE 탭 등 동시 조작이 가능하다.
+
+터치 컨트롤 시스템은 `systems/TouchControls.js`에 구현되어 있으며, GameScene과 BossScene에서 모바일 모드일 때 자동 생성된다. 키보드 입력과 공존하며 기존 PC 조작에 영향을 주지 않는다.
+
 ---
 
 ## 이벤트 시스템
@@ -377,3 +390,5 @@ QTE 판정 관련으로 GREAT_THRESHOLD는 ±0.05, GOOD_THRESHOLD는 ±0.15, GRE
 | **폭탄이 보스에게 입히는 데미지** | `patterns/bossConfigs.js` → `qteDamage` (BossScene 폭탄 콜백이 동일 값을 사용) |
 | **폭탄 시각 이펙트** | `systems/QTEManager.js` → `useBomb()` (ring 색/두께/duration, 카메라 셰이크) |
 | 점수 / 콤보 / 등급 기준 | `systems/ScoreManager.js` |
+| 터치 컨트롤 크기/위치 | `constants/game.js` → `TOUCH` |
+| 터치 컨트롤 렌더링/입력 | `systems/TouchControls.js` |
