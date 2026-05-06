@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, QTE, GAME_WIDTH, GAME_HEIGHT } from '../constants/game.js';
+import { COLORS, QTE, GAME_WIDTH, GAME_HEIGHT, TOUCH } from '../constants/game.js';
 import { QTE_KEYS_ARROWS, QTE_KEYS_WASD, KEY_DISPLAY_NAMES } from '../constants/keys.js';
 
 /**
@@ -43,9 +43,10 @@ export default class QTEManager {
   /**
    * 설정 적용
    */
-  configure(controlMode, gameMode) {
+  configure(controlMode, gameMode, mobileMode = false) {
     this.controlMode = controlMode;
     this.gameMode = gameMode;
+    this.mobileMode = mobileMode;
   }
 
   // ═══════════════════════════════════════
@@ -189,6 +190,22 @@ export default class QTEManager {
 
     // ── 입력 바인딩 ──
     this._bindInput(key);
+
+    if (this.mobileMode) {
+      const hitSize = 64 + TOUCH.QTE_HIT_PADDING * 2;
+      const hitZone = this.scene.add.rectangle(pos.x, pos.y, hitSize, hitSize, 0x000000, 0)
+        .setInteractive()
+        .setDepth(101);
+      hitZone.on('pointerdown', () => {
+        this._onQTEInput();
+      });
+      this.currentQTE.hitZone = hitZone;
+
+      // Show "TAP" instead of key name
+      if (this.currentQTE.keyText) {
+        this.currentQTE.keyText.setText('TAP');
+      }
+    }
   }
 
   /**
@@ -199,19 +216,39 @@ export default class QTEManager {
       return { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 };
     }
 
+    const px = this.player.x;
+    const py = this.player.y;
+
+    if (this.mobileMode) {
+      // Random angle around player, radius 60-100
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 60 + Math.random() * 40;
+      let x = px + Math.cos(angle) * radius;
+      let y = py + Math.sin(angle) * radius;
+      // Clamp to screen
+      x = Phaser.Math.Clamp(x, 40, GAME_WIDTH - 40);
+      y = Phaser.Math.Clamp(y, 40, GAME_HEIGHT - 40);
+      // Avoid bottom 25% (control zone)
+      const controlZoneTop = GAME_HEIGHT * (1 - TOUCH.CONTROL_ZONE_RATIO);
+      if (y > controlZoneTop) {
+        y = controlZoneTop - 10;
+      }
+      return { x, y };
+    }
+
     if (this.controlMode === 'wasd') {
       // WASD 모드: 캐릭터 반경 내 랜덤
       const angle = Math.random() * Math.PI * 2;
       const radius = 60 + Math.random() * 40;
       return {
-        x: Phaser.Math.Clamp(this.player.x + Math.cos(angle) * radius, 50, GAME_WIDTH - 50),
-        y: Phaser.Math.Clamp(this.player.y + Math.sin(angle) * radius, 50, GAME_HEIGHT - 50),
+        x: Phaser.Math.Clamp(px + Math.cos(angle) * radius, 50, GAME_WIDTH - 50),
+        y: Phaser.Math.Clamp(py + Math.sin(angle) * radius, 50, GAME_HEIGHT - 50),
       };
     } else {
       // 방향키 모드: 캐릭터 근접 고정 (위쪽)
       return {
-        x: Phaser.Math.Clamp(this.player.x, 50, GAME_WIDTH - 50),
-        y: Phaser.Math.Clamp(this.player.y - 60, 50, GAME_HEIGHT - 50),
+        x: Phaser.Math.Clamp(px, 50, GAME_WIDTH - 50),
+        y: Phaser.Math.Clamp(py - 60, 50, GAME_HEIGHT - 50),
       };
     }
   }
@@ -225,6 +262,7 @@ export default class QTEManager {
    * arrows / wasd 모두 키보드를 사용한다 (WASD 모드는 키보드 오른쪽 영역의 12개 키 사용).
    */
   _bindInput(expectedKey) {
+    if (this.mobileMode) return;
     this._unbindInput();
 
     const keyCode = Phaser.Input.Keyboard.KeyCodes[expectedKey];
@@ -242,6 +280,11 @@ export default class QTEManager {
    * 입력 바인딩 해제
    */
   _unbindInput() {
+    if (this.currentQTE && this.currentQTE.hitZone) {
+      this.currentQTE.hitZone.removeAllListeners();
+      this.currentQTE.hitZone.destroy();
+      this.currentQTE.hitZone = null;
+    }
     if (this._boundKeyObj) {
       this._boundKeyObj.off('down', this._boundKeyHandler);
       this._boundKeyObj = null;
@@ -412,6 +455,10 @@ export default class QTEManager {
     if (gfx) gfx.destroy();
     if (bandGfx) bandGfx.destroy();
     if (keyText) keyText.destroy();
+    if (this.currentQTE.hitZone) {
+      this.currentQTE.hitZone.removeAllListeners();
+      this.currentQTE.hitZone.destroy();
+    }
     this.currentQTE = null;
   }
 
@@ -507,6 +554,11 @@ export default class QTEManager {
   cancel() {
     if (this.currentQTE) {
       if (this.currentQTE.bandTween) this.currentQTE.bandTween.stop();
+      if (this.currentQTE.hitZone) {
+        this.currentQTE.hitZone.removeAllListeners();
+        this.currentQTE.hitZone.destroy();
+        this.currentQTE.hitZone = null;
+      }
       this._clearCurrentQTE();
     }
     this._unbindInput();
