@@ -2,7 +2,7 @@
 
 ## 개요
 
-Phaser 3 기반의 2D 탄막 회피 + QTE 리듬 액션 게임이다. 플레이어는 800×600 게임 영역에서 탄환, 레이저, 바닥 장판을 회피하면서 QTE 프롬프트에 반응하여 점수를 획득한다. 전체 20개 스테이지(4개 보스 포함)로 구성되며, 노말/이지 두 가지 난이도를 지원한다.
+Phaser 3 기반의 2D 탄막 회피 + QTE 리듬 액션 게임이다. 플레이어는 800×600 게임 영역에서 탄환, 레이저, 바닥 장판을 회피하면서 QTE 프롬프트에 반응하여 점수를 획득한다. 전체 20개 스테이지(4개 보스 포함)로 구성되며, 단일 난이도(NORMAL)로 운용된다. (EASY 모드는 삭제됨.)
 
 ---
 
@@ -15,7 +15,7 @@ src/
 │
 ├── constants/
 │   ├── game.js                 # 게임 전역 상수 (치수, 스탯, 점수, 색상, 스테이지 설정)
-│   └── keys.js                 # 키 매핑 (QTE 키풀, 마우스 버튼, 표시명)
+│   └── keys.js                 # 키 매핑 (arrows / wasd 두 종 QTE 키풀, 표시명)
 │
 ├── utils/
 │   ├── settings.js             # localStorage 기반 설정 저장/불러오기
@@ -51,7 +51,7 @@ src/
 │   └── bossConfigs.js          # 보스 1~4 설정 (HP, 페이즈, 공격, contact damage, chase, floor pattern)
 │
 └── ui/
-    ├── intro.js                # 인트로 화면 DOM UI (시작, 모드선택, 옵션, 스테이지 셀렉트)
+    ├── intro.js                # 인트로 화면 DOM UI (시작 버튼, 옵션, 스테이지 셀렉트)
     ├── result.js               # 결과 화면 DOM UI (점수, 등급, 통계)
     └── styles.css              # 전체 CSS 스타일
 ```
@@ -129,15 +129,13 @@ FSM(유한 상태 기계) 기반 AI를 가진다. 상태는 IDLE, ATTACK, CHARGE
 
 패턴 스케줄링과 난이도 증폭을 담당하는 핵심 시스템이다.
 
-역할은 세 가지다. 첫째, stagePatterns.js의 이벤트 타임라인을 읽고 `scene.time.delayedCall`로 스케줄링한다. 둘째, 노말 모드에서 패턴을 동적 증폭한다. 셋째, 이지 모드에서 패턴을 약화한다.
+역할은 두 가지다. 첫째, stagePatterns.js의 이벤트 타임라인을 읽고 `scene.time.delayedCall`로 스케줄링한다. 둘째, 노말 모드에서 패턴을 동적 증폭한다. (EASY 모드 삭제 이후 약화 분기는 제거됨.)
 
 노말 모드 증폭(`_amplifyPattern`) 로직은 다음과 같다. 스테이지 티어(5스테이지 단위)별로 증폭 배율이 적용되는데, 스테이지 1~4는 2.0배, 6~9는 3.0배, 11~14는 4.0배, 16~19는 5.0배이다. 비QTE 이벤트를 복제하되 0.3~1.8초 시간 오프셋을 두어 자연스러운 중첩을 만든다. QTE는 모든 스테이지에서 4~8초 간격으로 자동 삽입된다(스테이지 높을수록 더 자주). 빈 시간대(0.8초 간격으로 탐색)에 랜덤 기믹(floor, bullet, laser)을 채운다.
 
 파라미터 강화(`_hardenParams`)에서는 장판 경고시간을 40% 단축하고 크기를 스테이지당 3%씩 누적 확대한다. 탄환 수와 속도를 스테이지당 2~3%씩 증가시킨다. 레이저 경고시간을 40% 단축하고 굵기를 15% 증가시킨다.
 
 위치 랜덤화(`_randomizeParams`)에서 장판은 50% 확률로 플레이어 정중앙(±20px), 50%는 ±150px에 생성된다. 레이저는 40% 확률로 플레이어 정중앙 관통(±10px), 60%는 ±100px에 생성된다. 탄환은 화면 가장자리에서 플레이어 방향으로 발사되며, 산포 ±40px가 적용된다.
-
-이지 모드 약화(`_convertToEasy`)에서는 탄환 수 50% 감소 및 속도 80%, 장판 동시 2개 제한, 레이저 꺾임 제거 및 경고시간 130%, QTE 시퀀스 QWE 3개 고정 및 타이밍 120%가 적용된다. `floorPattern` 이벤트는 이지 모드에서 자동 제거된다(난이도 단순화).
 
 복합 floor 패턴 디스패치는 `_spawnGimmick`의 `'floorPattern'` 케이스로 분기되어 `floorPatterns.js`의 `FLOOR_PATTERNS[name]` 함수를 호출한다. 패턴 자체가 위치를 결정하므로 `_randomizeParams`는 기본 통과 경로를 그대로 따른다(switch에 케이스 없음). `_amplifyPattern`은 `floorPattern` 이벤트를 시간 오프셋 복제 대상에서 제외한다 — 위치 의미가 있는 패턴이라 단순 시간 시프트가 부적절하기 때문이다.
 
@@ -149,9 +147,11 @@ QTE 프롬프트 렌더링과 판정을 담당한다.
 
 판정 시스템에서, 내부 띠가 scale 0에서 1.4까지 선형 증가한다. scale이 정확히 1.0인 시점이 이상적이며, ±0.05 이내이면 Great, ±0.15 이내이면 Good, 나머지는 Fail이다.
 
-컨트롤 모드별 차이로, arrows 모드에서는 키보드(Q, W, E, R, A, S, D, F, 1~4)를 사용하며 프롬프트가 플레이어 위쪽 고정 위치에 표시된다. wasd 모드에서는 마우스 버튼(LMB, RMB, MMB)을 사용하며 프롬프트가 플레이어 반경 60~100px 내 랜덤 위치에 표시된다.
+컨트롤 모드별 차이로, 양 모드 모두 키보드 입력만 사용한다(과거 wasd 모드의 마우스 버튼 매핑은 폐지됨). arrows 모드에서는 왼손 영역 12개 키(Q, W, E, R, A, S, D, F, 1~4)를 사용하며 프롬프트가 플레이어 위쪽 고정 위치에 표시된다. wasd 모드에서는 오른손 영역 12개 키(8, 9, 0, -, I, O, P, [, K, L, ;, ')를 사용하며 프롬프트가 플레이어 반경 60~100px 내 랜덤 위치에 표시된다. 두 풀 모두 이동 키(화살표 또는 WASD)와 충돌하지 않도록 손이 분리되어 있다.
 
-폭탄 시스템에서, 연속 Great 5회 달성 시 폭탄 1개를 획득하며 스테이지당 최대 3개까지 보유 가능하다. E 키로 사용하면 화면의 모든 기믹(탄환, 레이저, 장판)이 제거된다.
+스테이지 클리어/사망 시점의 잔류 방지로, `cancel()` 메서드는 현재 활성 QTE의 띠 tween을 멈추고 시각/입력/큐/`isActive`를 모두 정리한다. `GameScene._onStageClear`가 이 메서드를 호출해 다음 씬으로 반쯤 표시된 프롬프트가 넘어가지 않도록 한다.
+
+폭탄 시스템에서, 연속 Great 5회 달성 시 폭탄 1개를 획득하며 스테이지당 최대 3개까지 보유 가능하다. **Y 키**로 사용하면 화면의 모든 기믹(탄환, 레이저, 장판)이 제거된다. 보스전에서는 추가로 보스에게 `qteDamage` 1회 분량 데미지(보스별 40/50/60/80)를 입히지만 보스 자체는 사라지지 않는다. 이펙트는 흰색 강한 플래시 대신 청록색 ring이 외곽으로 퍼지는 부드러운 형태(line width 6, alpha 0.55→0)와 약한 카메라 셰이크(180ms / 0.008)로 눈 부담을 줄였다.
 
 ### BulletManager (systems/BulletManager.js)
 
@@ -183,10 +183,10 @@ Phaser Arcade Physics Group 기반 오브젝트 풀(최대 300개)을 사용한�
 
 | 이름 | 설명 | 회피 양상 |
 |------|------|----------|
-| **ORBIT** | 호출 시점의 player 위치를 캡쳐, 반경 R의 원주에 작은 원형 장판 N개를 시계/반시계로 차례 발동 | 발동된 칸 wake 따라가기 또는 다음 칸 미리 이동 |
-| **SWEEP** | 길고 얇은 직사각형 장판이 맵을 가로/세로로 가로지름. 단일선 또는 평행 다중선 | 평행선 사이 안전구간으로 이동 |
+| **ORBIT** | 반경 R의 원주에 작은 원형 장판 N개를 시계/반시계로 차례 발동. `track=false`(튜토리얼)는 호출 시점 player 위치를 캡쳐해 고정 / `track=true`(stage 6+)는 매 spawn마다 player 위치를 다시 읽어 추적 | wake 따라가기, 또는 추적 모드에선 진행 방향과 반대로 회피 |
+| **SWEEP** | 길고 얇은 직사각형 장판이 맵을 가로/세로로 가로지름. `cross=true`(기본)일 때 직교 축으로도 같은 lines 동시 발동 — lines=1 → +자, lines=2 → #자 | 평행선 사이 안전 격자로 이동 |
 | **CHECKER** | 맵을 cols×rows 격자로 나눠 체크무늬 절반 칸 동시 발동 → phaseDelay 후 나머지 칸 발동 | 매 페이즈마다 안전한 절반으로 이동 |
-| **RADIAL** | 중심점에서 도넛형 ring들이 외곽으로 차례 확산. ring은 둘레의 작은 원형 장판들로 근사 | ring 사이 빈틈, 또는 가장 안쪽/바깥쪽 |
+| **RADIAL** | 중심점에서 도넛형 ring들이 외곽으로 차례 확산. ring은 둘레의 작은 원형 장판들로 근사. `miniCount > 0`(challenge=2/hell=4)이면 메인 RADIAL과 동시에 사방 랜덤 위치에 1/4 크기(`miniScale=0.25`) mini RADIAL이 동시다발 발동 | 메인 ring 빈틈 + mini를 동시에 피해야 함 |
 | **SCATTER** | 맵 전체에 무작위 위치로 작은 원형 장판들이 짧은 시간차로 발동. minDistance 보장(최대 5회 재추첨) | 빈틈을 즉시 찾아 위치 잡기 |
 
 **튜닝 상수 (모두 `floorPatterns.js` 한 파일에 모임)**:
@@ -214,6 +214,8 @@ Phaser Arcade Physics Group 기반 오브젝트 풀(최대 300개)을 사용한�
 
 등급은 이론적 최대 점수 대비 비율로 결정되며, SS(95%), S(85%), A(70%), B(50%), C(30%), D 순이다.
 
+결과 데이터는 `getResultData(stageReached, mode, reason, remainingHP)`로 빌드된다. `remainingHP`는 GameScene이 게임 종료 시점의 `player.hp`를 직접 전달한다. result 화면은 이 값을 "Remaining HP" 행으로 표시한다(과거 "Dodged" 표기는 호출처가 없어 항상 0이었으므로 제거됨). 콤보 표기는 "QTE Max Combo"로 명시되며, 점수 breakdown에서도 dodge 관련 행은 제거되어 Survival / QTE / Clear Bonus / Boss Kill만 노출된다.
+
 ---
 
 ## 씬 상세
@@ -224,7 +226,7 @@ Phaser Arcade Physics Group 기반 오브젝트 풀(최대 300개)을 사용한�
 
 `init(data)` 단계에서 mode, controlMode, dodgeKey, stage, playerHP, totalScore를 받는다. `create()` 단계에서 그리드 배경, Player, 모든 매니저(Laser, Bullet, Floor, QTE, Gimmick, Score)를 생성하고, input을 바인딩하며 UIScene을 launch한다. `update()` 단계에서 일시정지 여부, 플레이어 생존/스테이지클리어 여부를 체크하고, handleInput 호출 후 레이저/장판 충돌을 검사한다.
 
-스테이지 클리어 흐름은, 패턴 duration이 만료되면 `_onStageClear` 호출 → 기믹 정지/제거 → 보너스 표시 → 1.2초 후 "PRESS ENTER OR CLICK TO CONTINUE" 대기 → `_proceedToNext` → `_goNext`로 카메라 페이드아웃 후 다음 씬 시작이다.
+스테이지 클리어 흐름은, 패턴 duration이 만료되면 `_onStageClear` 호출 → 기믹 정지/제거 → **`qteManager.cancel()`로 진행 중인 QTE 즉시 정리** → 보너스 표시 → 1.2초 후 "PRESS ENTER OR CLICK TO CONTINUE" 대기 → `_proceedToNext` → `_goNext`로 카메라 페이드아웃 후 다음 씬 시작이다. (cancel을 빼면 클리어 직전에 시작된 QTE의 띠 그래픽이 다음 씬으로 잔류한다.)
 
 일시정지는 F10 키 또는 UIScene의 일시정지 버튼으로 트리거되며, `scene.pause()`로 현재 씬을 정지한 후 PauseScene을 launch한다. 재개 시 PauseScene을 stop하고 `scene.resume()`을 호출한다.
 
@@ -242,11 +244,13 @@ Phaser Arcade Physics Group 기반 오브젝트 풀(최대 300개)을 사용한�
 
 **Boss-stage floor patterns** — `create()`에서 `bossConfig.floorPattern.interval` 주기로 `_floorPatternTimer`를 등록한다. 콜백 `_triggerBossFloorPattern`은 `GROUP_PATTERN_POOLS[group]`에서 무작위 패턴명을 뽑아 `FLOOR_PATTERNS[name](this, this.floorManager, params)`를 호출한다. timer는 `_onBossDefeated`와 `shutdown` 양쪽에서 해제되어 cross-scene leak을 방지한다.
 
+**폭탄 사용 시 보스 데미지** — Y 키로 폭탄 사용 시 BossScene의 콜백이 모든 기믹을 clear한 뒤, 보스가 살아 있으면 `boss.takeDamage(bossConfig.qteDamage)`를 호출하여 QTE 1회 성공 분량(40/50/60/80)을 깎는다. 보스는 페이즈 전환 / 사망 처리 등을 정상 흐름으로 진행한다.
+
 ### UIScene (scenes/UIScene.js)
 
 GameScene/BossScene 위에 병렬로 실행되는 HUD 오버레이이다.
 
-표시 요소로, 좌상단에 모드/스테이지 정보, 점수, 콤보, 폭탄 수가 있다. 하단 중앙에 HP 바(200px 너비, HP 30% 이하 시 빨간색)와 스태미나 바가 있다. 우상단에 일시정지 버튼(‖ 아이콘 + F10 텍스트)과 배율 표시가 있다.
+표시 요소로, 좌상단에 스테이지/보스 라벨(예 `STAGE 7` 또는 `BOSS 10`), 점수, 콤보, 폭탄 수가 있다. 하단 중앙에 HP 바(200px 너비, HP 30% 이하 시 빨간색)와 스태미나 바가 있다. 우상단에 일시정지 버튼(‖ 아이콘 + F10 텍스트)과 배율 표시가 있다. (EASY 모드 삭제로 모드 라벨 표기는 사라졌다.)
 
 이벤트 리스닝 방식은 `_bindSceneEvents`로 GameScene과 BossScene 양쪽의 이벤트(updateHP, updateStamina, updateScore, updateCombo, updateBombs, updateMultiplier)를 리스닝한다.
 
@@ -319,9 +323,9 @@ Cross-scene listener cleanup — UIScene이 자기 events가 아니라 **다른 
 
 조작 설정은 localStorage에 저장되며 인트로 화면 옵션에서 변경한다.
 
-arrows 모드에서 이동은 화살표 키, QTE는 키보드(Q/W/E/R/A/S/D/F/1~4), 구르기는 SHIFT 또는 SPACE이다. wasd 모드에서 이동은 WASD 키, QTE는 마우스 버튼(LMB/RMB/MMB), 구르기는 SHIFT 또는 SPACE이다.
+arrows 모드에서 이동은 화살표 키, QTE는 왼손 키보드 12개(Q/W/E/R/A/S/D/F/1~4), 구르기는 SHIFT 또는 SPACE이다. wasd 모드에서 이동은 WASD 키, QTE는 오른손 키보드 12개(8/9/0/-/I/O/P/[/K/L/;/'), 구르기는 SHIFT 또는 SPACE이다. 두 모드 모두 키보드 입력만 사용하며 QTE 키 풀과 이동 키 풀이 손 단위로 분리되어 충돌하지 않는다.
 
-공통 조작으로, 폭탄은 E 키, 일시정지는 F10 키 또는 우상단 버튼 클릭이다.
+공통 조작으로, 폭탄은 **Y 키**, 일시정지는 F10 키 또는 우상단 버튼 클릭이다.
 
 ---
 
@@ -335,7 +339,7 @@ arrows 모드에서 이동은 화살표 키, QTE는 키보드(Q/W/E/R/A/S/D/F/1~
 
 ## QA 기능
 
-인트로 화면 우하단에 스테이지 셀렉트 드롭다운이 있다. 1~20 중 원하는 스테이지를 선택하고 모드(Easy/Normal)를 고르면 해당 스테이지에서 바로 시작한다. 보스 스테이지 선택 시 노말 모드에서는 BossScene으로, 이지 모드에서는 GameScene(보스 스킵)으로 진입한다.
+인트로 화면 우하단에 스테이지 셀렉트 드롭다운이 있다. 1~20 중 원하는 스테이지를 선택하고 START 버튼을 누르면 해당 스테이지에서 바로 시작한다(EASY 모드 삭제 후 모드 선택 popup 없음 — 항상 NORMAL). 보스 스테이지 선택 시 BossScene으로 진입한다.
 
 ---
 
@@ -355,16 +359,21 @@ QTE 판정 관련으로 GREAT_THRESHOLD는 ±0.05, GOOD_THRESHOLD는 ±0.15, GRE
 |----------------|------|
 | 플레이어 HP/스태미나/속도/구르기 거리 | `constants/game.js` → `PLAYER` |
 | QTE 판정 폭 / 무적 시간 / 폭탄 콤보 | `constants/game.js` → `QTE` |
-| QTE 키 풀 | `constants/keys.js` |
+| arrows / wasd QTE 키 풀 | `constants/keys.js` → `QTE_KEYS_ARROWS` / `QTE_KEYS_WASD` |
+| 폭탄 단축키 | `scenes/GameScene.js`, `scenes/BossScene.js`의 `bombKey = ... KeyCodes.Y` |
 | 단일 floor 변형(growing/shrinking/moving) 동작 | `systems/FloorManager.js` |
 | **복합 floor 패턴 자체의 빠르기/크기** | `patterns/floorPatterns.js` → `DEFAULTS.<name>` |
+| **ORBIT 추적 모드 on/off** | `floorPatterns.js` → `DEFAULTS.orbit.track` 또는 그룹 튜닝 |
+| **SWEEP 가로+세로 동시 발동** | `floorPatterns.js` → `DEFAULTS.sweep.cross` |
+| **RADIAL 사방 mini 동시 발동** | `floorPatterns.js` → `DEFAULTS.radial.miniCount` 또는 그룹 튜닝 |
 | **그룹별 패턴 강도** | `patterns/floorPatterns.js` → `DIFFICULTY_TUNING.<group>` |
 | **그룹에 어떤 패턴이 등장할지** | `patterns/floorPatterns.js` → `GROUP_PATTERN_POOLS.<group>` |
 | **스테이지별 패턴 빈도/시간 범위** | `patterns/stagePatterns.js` → 해당 스테이지의 `count` / `endTime` |
 | 스테이지별 바닐라 이벤트(floor/bullet/laser/qte) 타임라인 | `patterns/stagePatterns.js` → `STAGE_N` |
 | 스테이지별 난이도 곱(탄환 속도/수, 경고 시간) | `patterns/stagePatterns.js` → `STAGE_CONFIGS` |
 | 노말 모드 증폭 강도 | `systems/GimmickManager.js` → `_amplifyPattern`, `_hardenParams` |
-| 이지 모드 약화 | `systems/GimmickManager.js` → `_convertToEasy` |
 | 보스 HP/페이즈/공격 패턴 | `patterns/bossConfigs.js` |
 | **보스 contact damage / chase speed / floor pattern interval & group** | `patterns/bossConfigs.js` → 각 보스 객체의 신규 필드 |
+| **폭탄이 보스에게 입히는 데미지** | `patterns/bossConfigs.js` → `qteDamage` (BossScene 폭탄 콜백이 동일 값을 사용) |
+| **폭탄 시각 이펙트** | `systems/QTEManager.js` → `useBomb()` (ring 색/두께/duration, 카메라 셰이크) |
 | 점수 / 콤보 / 등급 기준 | `systems/ScoreManager.js` |
