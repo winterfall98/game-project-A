@@ -2,8 +2,10 @@
 
 // 기본 설정
 export const DEFAULT_SETTINGS = {
-  controlMode: 'arrows',    // 'arrows' | 'wasd'
-  dodgeKey: 'SHIFT',        // 'SHIFT' | 'SPACE'
+  controlMode: 'arrows',
+  dodgeKey: 'SHIFT',
+  mobileMode: null,         // null = auto-detect, true/false = manual override
+  touchControlScale: 1.0,   // 0.7 ~ 1.3
 };
 
 // 방향키 모드 QTE 키 (왼손이 이동, 오른손은 12개 키 풀)

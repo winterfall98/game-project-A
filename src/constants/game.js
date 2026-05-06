@@ -74,6 +74,37 @@ export const CONTROL = {
   WASD: 'wasd',
 };
 
+// 터치 컨트롤
+export const TOUCH = {
+  // 조이스틱
+  JOYSTICK_RADIUS: 45,
+  JOYSTICK_THUMB_RADIUS: 17,
+  JOYSTICK_MARGIN_X: 69,
+  JOYSTICK_MARGIN_Y: 61,
+
+  // 대쉬 버튼
+  DASH_RADIUS: 35,
+  DASH_MARGIN_X: 59,
+  DASH_MARGIN_Y: 51,
+
+  // 폭탄 버튼 (대쉬의 우상단, 크기 1/2)
+  BOMB_RADIUS: 19,
+  BOMB_OFFSET_X: 27,
+  BOMB_OFFSET_Y: -56,
+
+  // 배율 범위
+  SCALE_MIN: 0.7,
+  SCALE_MAX: 1.3,
+  SCALE_DEFAULT: 1.0,
+  SCALE_STEP: 0.1,
+
+  // QTE 프롬프트 터치 히트 패딩
+  QTE_HIT_PADDING: 10,
+
+  // 컨트롤 영역 (QTE 프롬프트 하단 회피용)
+  CONTROL_ZONE_RATIO: 0.25,
+};
+
 // 색상 팔레트 (접근성 고려)
 export const COLORS = {
   // 배경
