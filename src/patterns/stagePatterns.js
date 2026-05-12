@@ -1830,29 +1830,29 @@ const STAGE_PATTERNS = {
 // 그룹별 등장 패턴 풀은 floorPatterns.js의 GROUP_PATTERN_POOLS에서 관리.
 // ─────────────────────────────────────────────────────────
 
-// Tutorial group (stages 1-4): duration 30s, count 6 → 평균 ~4초 간격
-STAGE_1.events.push(...randomFloorPatternEvents('tutorial', { count: 6, endTime: 28 }));
-STAGE_2.events.push(...randomFloorPatternEvents('tutorial', { count: 6, endTime: 28 }));
-STAGE_3.events.push(...randomFloorPatternEvents('tutorial', { count: 6, endTime: 28 }));
-STAGE_4.events.push(...randomFloorPatternEvents('tutorial', { count: 6, endTime: 28 }));
+// Tutorial group (stages 1-4): count 감소, 종료 구간 완화
+STAGE_1.events.push(...randomFloorPatternEvents('tutorial', { count: 4, endTime: 26 }));
+STAGE_2.events.push(...randomFloorPatternEvents('tutorial', { count: 4, endTime: 26 }));
+STAGE_3.events.push(...randomFloorPatternEvents('tutorial', { count: 4, endTime: 26 }));
+STAGE_4.events.push(...randomFloorPatternEvents('tutorial', { count: 4, endTime: 26 }));
 
-// Growth group (stages 6-9): duration 35s, count 8 → 평균 ~4초 간격
-STAGE_6.events.push(...randomFloorPatternEvents('growth', { count: 8, endTime: 33 }));
-STAGE_7.events.push(...randomFloorPatternEvents('growth', { count: 8, endTime: 33 }));
-STAGE_8.events.push(...randomFloorPatternEvents('growth', { count: 8, endTime: 33 }));
-STAGE_9.events.push(...randomFloorPatternEvents('growth', { count: 8, endTime: 33 }));
+// Growth group (stages 6-9): count 감소, 종료 구간 완화
+STAGE_6.events.push(...randomFloorPatternEvents('growth', { count: 6, endTime: 31 }));
+STAGE_7.events.push(...randomFloorPatternEvents('growth', { count: 6, endTime: 31 }));
+STAGE_8.events.push(...randomFloorPatternEvents('growth', { count: 6, endTime: 31 }));
+STAGE_9.events.push(...randomFloorPatternEvents('growth', { count: 6, endTime: 31 }));
 
-// Challenge group (stages 11-14): duration 40s, count 10 → 평균 ~3.6초 간격
-STAGE_11.events.push(...randomFloorPatternEvents('challenge', { count: 10, endTime: 38 }));
-STAGE_12.events.push(...randomFloorPatternEvents('challenge', { count: 10, endTime: 38 }));
-STAGE_13.events.push(...randomFloorPatternEvents('challenge', { count: 10, endTime: 38 }));
-STAGE_14.events.push(...randomFloorPatternEvents('challenge', { count: 10, endTime: 38 }));
+// Challenge group (stages 11-14): count 감소, 종료 구간 완화
+STAGE_11.events.push(...randomFloorPatternEvents('challenge', { count: 8, endTime: 36 }));
+STAGE_12.events.push(...randomFloorPatternEvents('challenge', { count: 8, endTime: 36 }));
+STAGE_13.events.push(...randomFloorPatternEvents('challenge', { count: 8, endTime: 36 }));
+STAGE_14.events.push(...randomFloorPatternEvents('challenge', { count: 8, endTime: 36 }));
 
-// Hell group (stages 16-19): duration 45s, count 14 → 평균 ~3초 간격
-STAGE_16.events.push(...randomFloorPatternEvents('hell', { count: 14, endTime: 43 }));
-STAGE_17.events.push(...randomFloorPatternEvents('hell', { count: 14, endTime: 43 }));
-STAGE_18.events.push(...randomFloorPatternEvents('hell', { count: 14, endTime: 43 }));
-STAGE_19.events.push(...randomFloorPatternEvents('hell', { count: 14, endTime: 43 }));
+// Hell group (stages 16-19): count 감소, 종료 구간 완화
+STAGE_16.events.push(...randomFloorPatternEvents('hell', { count: 12, endTime: 41 }));
+STAGE_17.events.push(...randomFloorPatternEvents('hell', { count: 12, endTime: 41 }));
+STAGE_18.events.push(...randomFloorPatternEvents('hell', { count: 12, endTime: 41 }));
+STAGE_19.events.push(...randomFloorPatternEvents('hell', { count: 12, endTime: 41 }));
 
 /**
  * Get the pattern for a specific stage

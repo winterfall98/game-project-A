@@ -186,9 +186,9 @@ export default class UIScene extends Phaser.Scene {
   onUpdateBombs({ count }) {
     if (count > 0) {
       // Use text stars instead of unicode
-      this.bombText.setText('BOMB: ' + '*'.repeat(count));
+      this.bombText.setText('BOMB(Y): ' + '*'.repeat(count));
     } else {
-      this.bombText.setText('');
+      this.bombText.setText('BOMB KEY: Y');
     }
   }
 

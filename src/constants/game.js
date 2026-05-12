@@ -11,8 +11,9 @@ export const PLAYER = {
   DODGE_STAMINA_COST: 5,
   DODGE_DURATION: 300,      // 구르기 무적 시간 (ms)
   DODGE_DISTANCE: 120,      // 구르기 이동 거리
-  MOVE_SPEED: 200,          // 이동 속도 (px/s)
-  HITBOX_RADIUS: 14,        // 히트박스 반지름
+  MOVE_SPEED: 220,          // 이동 속도 (px/s)
+  HITBOX_RADIUS: 10,        // 히트박스 반지름
+  DAMAGE_INVINCIBLE_MS: 500, // 피격 후 무적 시간 (ms)
 };
 
 // QTE 판정 범위
@@ -21,6 +22,21 @@ export const QTE = {
   GOOD_THRESHOLD: 0.15,     // |차이| <= 0.15 → Good
   GREAT_INVINCIBLE: 300,    // Great 시 무적 시간 (ms)
   BOMB_COMBO_REQUIRED: 5,   // 폭탄 획득에 필요한 연속 Great
+  RANDOMIZE_STAGE_SEQUENCES: true, // stagePatterns 고정 sequence를 무시하고 길이만 사용해 랜덤 생성
+};
+
+// 패턴 증폭/밀도 튜닝
+export const PATTERN = {
+  AMPLIFY_BASE: 1.4,
+  AMPLIFY_PER_TIER: 0.35,
+  EXTRA_EVENT_FACTOR: 0.5,    // 복제 이벤트 강도
+  EXTRA_OFFSET_MIN: 0.4,
+  EXTRA_OFFSET_MAX: 1.4,
+  AUTO_QTE_BASE_INTERVAL: 9,  // 스테이지 상승 전 기본 QTE 삽입 간격(초)
+  AUTO_QTE_MIN_INTERVAL: 6,   // 최소 QTE 삽입 간격(초)
+  ENABLE_FILLER_EVENTS: false,
+  FILLER_SCAN_STEP: 1.2,
+  FILLER_GAP_THRESHOLD: 1.0,
 };
 
 // 스코어링

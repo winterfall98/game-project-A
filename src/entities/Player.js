@@ -45,7 +45,7 @@ export default class Player extends Phaser.GameObjects.Container {
     // ── 히트박스 디버그 표시 (개발용) ──
     this.hitboxDebug = scene.add.graphics();
     this.add(this.hitboxDebug);
-    this.showHitbox = false; // true로 바꾸면 히트박스 표시
+    this.showHitbox = true; // true면 히트박스 표시
 
     // ── 스태미나 자동 회복 (초당 1) ──
     this._staminaRegenTimer = scene.time.addEvent({
@@ -88,7 +88,9 @@ export default class Player extends Phaser.GameObjects.Container {
     // 히트박스 디버그
     if (this.showHitbox) {
       this.hitboxDebug.clear();
-      this.hitboxDebug.lineStyle(1, 0x00ff00, 0.6);
+      this.hitboxDebug.fillStyle(0x00ff00, 0.2);
+      this.hitboxDebug.fillCircle(0, 0, PLAYER.HITBOX_RADIUS);
+      this.hitboxDebug.lineStyle(1, 0x00ff00, 0.7);
       this.hitboxDebug.strokeCircle(0, 0, PLAYER.HITBOX_RADIUS);
     }
   }
@@ -303,8 +305,8 @@ export default class Player extends Phaser.GameObjects.Container {
     // Full impact effect (shake + screen flash + vignette)
     impactEffect(this.scene, 0.012);
 
-    // 짧은 무적 (연속 피격 방지, 0.5초)
-    this.setInvincible(500);
+    // 짧은 무적 (연속 피격 방지)
+    this.setInvincible(PLAYER.DAMAGE_INVINCIBLE_MS);
   }
 
   /**
@@ -325,7 +327,6 @@ export default class Player extends Phaser.GameObjects.Container {
       ease: 'Power2',
       onComplete: () => {
         this.scene.events.emit('playerDeath');
-        this.scene.game.events.emit('gameEnd', { reason: 'death' });
       },
     });
   }

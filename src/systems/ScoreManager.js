@@ -32,6 +32,7 @@ export default class ScoreManager {
     // Per-stage tracking
     this.stageDamageTaken = false;
     this.noDamageStages = 0;
+    this.damageByType = { bullet: 0, laser: 0, floor: 0, other: 0 };
 
     // QTE accuracy
     this.totalGreat = 0;
@@ -117,8 +118,10 @@ export default class ScoreManager {
     });
   }
 
-  onDamageTaken() {
+  onDamageTaken(type = 'other') {
     this.stageDamageTaken = true;
+    if (!this.damageByType[type]) this.damageByType[type] = 0;
+    this.damageByType[type]++;
   }
 
   onStageClear(stageNumber) {

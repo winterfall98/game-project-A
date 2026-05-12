@@ -38,7 +38,7 @@ export default class GameScene extends Phaser.Scene {
     this.bulletManager = new BulletManager(this, this.player);
     this.floorManager = new FloorManager(this);
     this.qteManager = new QTEManager(this, this.player);
-    this.qteManager.configure(this.controlMode, this.gameMode);
+    this.qteManager.configure(this.controlMode, this.gameMode, this.mobileMode);
     this.gimmickManager = new GimmickManager(this, {
       laser: this.laserManager, bullet: this.bulletManager,
       floor: this.floorManager, qte: this.qteManager,
@@ -47,9 +47,11 @@ export default class GameScene extends Phaser.Scene {
     this.scoreManager.carryOverScore = this.totalScore;
     this.scoreManager.startSurvivalTimer();
     this.bulletManager.setupOverlap(this.player, function(p) {
-      p.takeDamage(10);
-      this.scoreManager.onDamageTaken();
+      const took = p.takeDamage(10);
+      if (took) this.scoreManager.onDamageTaken('bullet');
     }, this);
+    this._onGimmickDodged = this._onGimmickDodged || this.onGimmickDodged.bind(this);
+    this.events.on('gimmickDodged', this._onGimmickDodged);
     this.setupInput();
     this.touchControls = null;
     if (this.mobileMode) {
@@ -80,18 +82,34 @@ export default class GameScene extends Phaser.Scene {
     if (this.isPaused) return;
     if (!this.player || !this.player.isAlive || this.stageCleared) return;
     this.handleInput();
-    if (!this._laserHitCooldown && this.laserManager.checkCollision(this.player)) {
-      this.player.takeDamage(15);
-      this.scoreManager.onDamageTaken();
+    this.bulletManager.update();
+    const laserHit = this.laserManager.checkCollision(this.player);
+    if (!this._laserHitCooldown && laserHit) {
+      const took = this.player.takeDamage(15);
+      if (took) {
+        this.laserManager.markDamaged(laserHit);
+        this.scoreManager.onDamageTaken('laser');
+      }
       this._laserHitCooldown = true;
       this.time.delayedCall(600, function() { this._laserHitCooldown = false; }.bind(this));
     }
-    if (!this._floorHitCooldown && this.floorManager.checkCollision(this.player)) {
-      this.player.takeDamage(10);
-      this.scoreManager.onDamageTaken();
+    const floorHit = this.floorManager.checkCollision(this.player);
+    if (!this._floorHitCooldown && floorHit) {
+      const took = this.player.takeDamage(10);
+      if (took) {
+        this.floorManager.markDamaged(floorHit);
+        this.scoreManager.onDamageTaken('floor');
+      }
       this._floorHitCooldown = true;
       this.time.delayedCall(500, function() { this._floorHitCooldown = false; }.bind(this));
     }
+  }
+
+  onGimmickDodged(data) {
+    if (!data || this.stageCleared || !this.player || !this.player.isAlive) return;
+    if (data.type === 'bullet') this.scoreManager.onBulletDodged();
+    if (data.type === 'laser') this.scoreManager.onLaserDodged();
+    if (data.type === 'floor') this.scoreManager.onFloorDodged();
   }
 
   _loadStagePattern() {
@@ -234,7 +252,7 @@ export default class GameScene extends Phaser.Scene {
       }
 
       this.touchControls.updateState(
-        this.player.stamina >= 5,
+        this.player.stamina >= PLAYER.DODGE_STAMINA_COST,
         this.qteManager.bombs,
       );
     } else {
@@ -286,5 +304,6 @@ export default class GameScene extends Phaser.Scene {
     if (this.scoreManager) this.scoreManager.destroy();
     if (this._countdownTimer) this._countdownTimer.remove(false);
     if (this._stageTimer) this._stageTimer.remove(false);
+    if (this._onGimmickDodged) this.events.off('gimmickDodged', this._onGimmickDodged);
   }
 }

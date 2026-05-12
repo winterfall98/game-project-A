@@ -28,6 +28,7 @@ export default class BossScene extends Phaser.Scene {
     this.controlMode = data.controlMode || 'arrows';
     this.dodgeKey = data.dodgeKey || 'SHIFT';
     this.currentStage = data.stage || 5;
+    this.totalScore = data.totalScore || 0;
     this.bossIndex = STAGE.BOSS_STAGES.indexOf(this.currentStage);
     this.mobileMode = data.mobileMode || false;
     this.touchControlScale = data.touchControlScale || 1.0;
@@ -157,8 +158,9 @@ export default class BossScene extends Phaser.Scene {
     // Initial UI state
     this.events.emit('updateHP', { current: this.player.hp, max: PLAYER.MAX_HP });
     this.events.emit('updateStamina', { current: this.player.stamina, max: PLAYER.MAX_STAMINA });
-    this.events.emit('updateScore', { score: 0 });
+    this.events.emit('updateScore', { score: this.totalScore });
     this.events.emit('updateBombs', { count: 0 });
+    this.events.on('playerDeath', this._onGameOver, this);
 
     this.game.events.emit('bossStarted', { stage: this.currentStage });
     console.log('[BossScene] create complete');
@@ -169,6 +171,7 @@ export default class BossScene extends Phaser.Scene {
     if (!this.player || !this.player.isAlive) return;
 
     this.handleInput();
+    this.bulletManager.update();
 
     // Laser collision
     if (!this._laserHitCooldown && this.laserManager.checkCollision(this.player)) {
@@ -598,7 +601,7 @@ export default class BossScene extends Phaser.Scene {
       }
 
       this.touchControls.updateState(
-        this.player.stamina >= 5,
+        this.player.stamina >= PLAYER.DODGE_STAMINA_COST,
         this.qteManager.bombs,
       );
     } else {
@@ -675,9 +678,10 @@ export default class BossScene extends Phaser.Scene {
     var next = this.currentStage + 1;
     if (next > STAGE.TOTAL) {
       this.game.events.emit('gameEnd', {
+        reason: 'clear',
         stage: this.currentStage,
         mode: this.gameMode,
-        result: 'clear',
+        score: this.totalScore,
       });
       return;
     }
@@ -691,8 +695,27 @@ export default class BossScene extends Phaser.Scene {
         dodgeKey: this.dodgeKey,
         stage: next,
         playerHP: this.player ? this.player.hp : PLAYER.MAX_HP,
-        totalScore: 0,
+        totalScore: this.totalScore,
         mobileMode: this.mobileMode, touchControlScale: this.touchControlScale,
+      });
+    });
+  }
+
+  _onGameOver() {
+    if (this._qteTimer) this._qteTimer.remove(false);
+    if (this._countdownTimer) this._countdownTimer.remove(false);
+    if (this._floorPatternTimer) this._floorPatternTimer.remove(false);
+    if (this.qteManager) this.qteManager.cancel();
+    this.laserManager.clearAll();
+    this.bulletManager.clearAll();
+    this.floorManager.clearAll();
+    this.time.delayedCall(300, () => {
+      this.game.events.emit('gameEnd', {
+        reason: 'death',
+        mode: this.gameMode,
+        stage: this.currentStage,
+        score: this.totalScore,
+        remainingHP: 0,
       });
     });
   }
@@ -733,5 +756,6 @@ export default class BossScene extends Phaser.Scene {
       this.qteManager.cancel();
       this.qteManager.destroy();
     }
+    this.events.off('playerDeath', this._onGameOver, this);
   }
 }

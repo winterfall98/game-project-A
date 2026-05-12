@@ -22,13 +22,6 @@ export default class BulletManager {
       runChildUpdate: false,
     });
 
-    // ── 화면 밖 탄환 자동 비활성화 ──
-    this.scene.physics.world.on('worldbounds', (body) => {
-      if (body.gameObject && body.gameObject.texture.key === 'bullet') {
-        this._killBullet(body.gameObject);
-      }
-    });
-
     // 통계 (회피 점수용)
     this.totalSpawned = 0;
     this.totalHit = 0;
@@ -65,12 +58,10 @@ export default class BulletManager {
     bullet.setActive(true).setVisible(true);
     bullet.body.enable = true;
     bullet.body.setCircle(6, 4, 4);
-    bullet.body.onWorldBounds = true;
-    bullet.body.setCollideWorldBounds(true);
-    // 경계 넘으면 이벤트 대신 직접 제거하기 위해 bounce 0
-    bullet.body.setBounce(0);
-    // worldbounds 넘으면 자동 비활성화
-    bullet.body.world.on('worldbounds', () => {});
+    bullet.body.onWorldBounds = false;
+    bullet.body.setCollideWorldBounds(false);
+    bullet._removed = false;
+    bullet._hitPlayer = false;
 
     this.totalSpawned++;
     return bullet;
@@ -79,7 +70,14 @@ export default class BulletManager {
   /**
    * 탄환 비활성화
    */
-  _killBullet(bullet) {
+  _killBullet(bullet, reason = 'cleared') {
+    if (!bullet || bullet._removed) return;
+    bullet._removed = true;
+
+    if (!bullet._hitPlayer && (reason === 'dodged' || reason === 'expired')) {
+      this.scene.events.emit('gimmickDodged', { type: 'bullet' });
+    }
+
     bullet.setActive(false).setVisible(false);
     bullet.body.enable = false;
     bullet.body.stop();
@@ -104,6 +102,9 @@ export default class BulletManager {
    * @param {number} [pattern.delay] - 탄환 간 딜레이 (ms, 0이면 동시)
    */
   firePattern(pattern) {
+    if (this.scene.stageCleared || this.scene._waitingForNext) return;
+    if (this.player && !this.player.isAlive) return;
+
     const { type, count, speed, delay = 0 } = pattern;
 
     // 발사 원점 결정
@@ -225,6 +226,9 @@ export default class BulletManager {
    * 단일 탄환 발사
    */
   _launchBullet(x, y, angleDeg, speed) {
+    if (this.scene.stageCleared || this.scene._waitingForNext) return;
+    if (this.player && !this.player.isAlive) return;
+
     const bullet = this._getBullet(x, y);
     if (!bullet) return;
 
@@ -236,7 +240,7 @@ export default class BulletManager {
 
     // 화면 밖 자동 제거 타이머 (안전장치, 10초)
     this.scene.time.delayedCall(10000, () => {
-      if (bullet.active) this._killBullet(bullet);
+      if (bullet.active) this._killBullet(bullet, 'expired');
     });
   }
 
@@ -250,7 +254,8 @@ export default class BulletManager {
   setupOverlap(player, callback, context) {
     this.scene.physics.add.overlap(player, this.group, (p, bullet) => {
       if (p.isInvincible) return;
-      this._killBullet(bullet);
+      bullet._hitPlayer = true;
+      this._killBullet(bullet, 'hit');
       this.totalHit++;
       callback.call(context, p, bullet);
     });
@@ -261,7 +266,24 @@ export default class BulletManager {
    */
   clearAll() {
     this.group.getChildren().forEach((bullet) => {
-      if (bullet.active) this._killBullet(bullet);
+      if (bullet.active) this._killBullet(bullet, 'cleared');
+    });
+  }
+
+  /**
+   * 활성 탄환 업데이트
+   * - 화면 밖으로 충분히 벗어나면 회피로 간주해 정리
+   */
+  update() {
+    const margin = 40;
+    this.group.getChildren().forEach((bullet) => {
+      if (!bullet || !bullet.active) return;
+      if (
+        bullet.x < -margin || bullet.x > GAME_WIDTH + margin ||
+        bullet.y < -margin || bullet.y > GAME_HEIGHT + margin
+      ) {
+        this._killBullet(bullet, 'dodged');
+      }
     });
   }
 

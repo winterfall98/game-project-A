@@ -19,6 +19,7 @@ export default class QTEManager {
     this.queue = [];           // QTE 시퀀스 큐
     this.currentQTE = null;    // 현재 진행 중인 QTE
     this.isActive = false;     // QTE 진행 중 여부
+    this.sequenceToken = 0;    // cancel/재시작 경합 방지 토큰
 
     // ── 콤보 & 폭탄 ──
     this.greatCombo = 0;       // 연속 Great 횟수
@@ -67,6 +68,7 @@ export default class QTEManager {
     this.isActive = true;
     this._sequenceResults = [];
     this._onSequenceComplete = onComplete || (() => {});
+    this.sequenceToken++;
 
     this._startNextQTE();
   }
@@ -320,6 +322,7 @@ export default class QTEManager {
   _resolveQTE(result) {
     if (!this.currentQTE || this.currentQTE.resolved) return;
     this.currentQTE.resolved = true;
+    const tokenAtResolve = this.sequenceToken;
 
     this._unbindInput();
     this.currentQTE.bandTween.stop();
@@ -368,6 +371,9 @@ export default class QTEManager {
 
     // 잠시 후 다음 QTE
     this.scene.time.delayedCall(400, () => {
+      // cancel() 또는 새 시퀀스 시작으로 토큰이 바뀌었으면 무시
+      if (tokenAtResolve !== this.sequenceToken) return;
+      if (!this._sequenceResults || !Array.isArray(this._sequenceResults)) return;
       this._clearCurrentQTE();
       this._sequenceResults.push(result);
       this._startNextQTE();
@@ -552,6 +558,7 @@ export default class QTEManager {
    * 스테이지 클리어/사망 시점에 호출하여 QTE 프롬프트가 다음 씬으로 잔류하지 않도록 한다.
    */
   cancel() {
+    this.sequenceToken++;
     if (this.currentQTE) {
       if (this.currentQTE.bandTween) this.currentQTE.bandTween.stop();
       if (this.currentQTE.hitZone) {
