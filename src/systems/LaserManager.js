@@ -26,9 +26,12 @@ export default class LaserManager {
    * @param {number} [params.activeTime=800] 활성 시간(ms)
    */
   spawnStraight(params) {
+    if (this.scene.stageCleared || this.scene._waitingForNext) return;
+    if (this.scene.player && !this.scene.player.isAlive) return;
+
     const {
       startX, startY, endX, endY,
-      width = 20,
+      width = 15,
       warningTime = 1000,
       activeTime = 800,
     } = params;
@@ -41,6 +44,7 @@ export default class LaserManager {
       phase: 'warning',   // 'warning' | 'active' | 'fading'
       isActive: false,     // 충돌 판정 가능 여부
       destroyed: false,
+      didDamage: false,
     };
 
     this.activeLasers.push(laser);
@@ -57,9 +61,9 @@ export default class LaserManager {
       repeat: Math.floor(warningTime / 400) - 1,
       onUpdate: (tween) => {
         if (laser.destroyed) return;
-        const alpha = 0.2 + tween.getValue() * 0.4;
+        const alpha = 0.2 + tween.getValue();
         laser.gfx.clear();
-        this._drawLines(laser, COLORS.LASER_WARNING, alpha, width * 0.4);
+        this._drawLines(laser, COLORS.LASER_WARNING, alpha, width);
       },
     });
 
@@ -94,7 +98,7 @@ export default class LaserManager {
           targets: laser.gfx,
           alpha: 0,
           duration: 300,
-          onComplete: () => this._destroyLaser(laser),
+          onComplete: () => this._destroyLaser(laser, 'expired'),
         });
       });
     });
@@ -114,6 +118,9 @@ export default class LaserManager {
    * @param {number} [params.activeTime=800]
    */
   spawnBent(params) {
+    if (this.scene.stageCleared || this.scene._waitingForNext) return;
+    if (this.scene.player && !this.scene.player.isAlive) return;
+
     const {
       startX, startY, bendX, bendY, endX, endY,
       width = 20,
@@ -132,6 +139,7 @@ export default class LaserManager {
       phase: 'warning',
       isActive: false,
       destroyed: false,
+      didDamage: false,
     };
 
     this.activeLasers.push(laser);
@@ -174,7 +182,7 @@ export default class LaserManager {
           targets: laser.gfx,
           alpha: 0,
           duration: 300,
-          onComplete: () => this._destroyLaser(laser),
+          onComplete: () => this._destroyLaser(laser, 'expired'),
         });
       });
     });
@@ -201,10 +209,10 @@ export default class LaserManager {
   /**
    * 플레이어와 활성 레이저 충돌 체크 (매 프레임 호출)
    * @param {Player} player
-   * @returns {boolean} 피격 여부
+   * @returns {object|null} 충돌한 laser 객체 (없으면 null)
    */
   checkCollision(player) {
-    if (!player.isAlive || player.isInvincible) return false;
+    if (!player.isAlive || player.isInvincible) return null;
 
     const playerCircle = new Phaser.Geom.Circle(player.x, player.y, player.body.radius);
 
@@ -215,11 +223,11 @@ export default class LaserManager {
         // 레이저 굵기를 고려한 충돌: 선분과 원의 최단거리 < (굵기/2 + 반지름)
         const dist = this._distanceLineToPoint(line, player.x, player.y);
         if (dist < (laser.width / 2 + player.body.radius)) {
-          return true;
+          return laser;
         }
       }
     }
-    return false;
+    return null;
   }
 
   /**
@@ -244,9 +252,12 @@ export default class LaserManager {
   /**
    * 레이저 제거
    */
-  _destroyLaser(laser) {
+  _destroyLaser(laser, reason = 'cleared') {
     laser.destroyed = true;
     laser.isActive = false;
+    if (reason === 'expired' && !laser.didDamage) {
+      this.scene.events.emit('gimmickDodged', { type: 'laser' });
+    }
     if (laser.gfx) laser.gfx.destroy();
     const idx = this.activeLasers.indexOf(laser);
     if (idx !== -1) this.activeLasers.splice(idx, 1);
@@ -256,8 +267,13 @@ export default class LaserManager {
    * 모든 레이저 제거 (폭탄 등)
    */
   clearAll() {
-    [...this.activeLasers].forEach((laser) => this._destroyLaser(laser));
+    [...this.activeLasers].forEach((laser) => this._destroyLaser(laser, 'cleared'));
     this.activeLasers = [];
+  }
+
+  markDamaged(laser) {
+    if (!laser) return;
+    laser.didDamage = true;
   }
 
   /**

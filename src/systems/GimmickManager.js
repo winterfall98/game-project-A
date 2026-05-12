@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from '../constants/game.js';
+import { GAME_WIDTH, GAME_HEIGHT, PATTERN, QTE } from '../constants/game.js';
 import { FLOOR_PATTERNS } from '../patterns/floorPatterns.js';
 
 /**
@@ -79,11 +79,32 @@ export default class GimmickManager {
         break;
 
       case 'qte': {
-        const sequence = p.sequence
-          ? p.sequence.map((key) => ({ key, timing: p.timing || 1500 }))
-          : this.qteManager.generateRandomSequence(p.count || 3, p.timing || 1500);
+        let sequence;
+        if (p.sequence) {
+          if (QTE.RANDOMIZE_STAGE_SEQUENCES) {
+            const count = p.sequence.length || p.count || 3;
+            // WASD 모드는 전용 키풀 사용, 방향키 모드는 stage sequence 키 집합 내에서 랜덤
+            if (this.qteManager.controlMode === 'wasd') {
+              sequence = this.qteManager.generateRandomSequence(count, p.timing || 1500);
+            } else {
+              sequence = [];
+              for (let i = 0; i < count; i++) {
+                const key = p.sequence[Math.floor(Math.random() * p.sequence.length)];
+                sequence.push({ key, timing: p.timing || 1500 });
+              }
+            }
+          } else {
+            sequence = p.sequence.map((key) => ({ key, timing: p.timing || 1500 }));
+          }
+        } else {
+          sequence = this.qteManager.generateRandomSequence(p.count || 3, p.timing || 1500);
+        }
 
         this.qteManager.startSequence(sequence, (results) => {
+          // ScoreManager와 느슨하게 결합: 존재하면 QTE 점수/콤보 반영
+          if (this.scene.scoreManager && results && Array.isArray(results)) {
+            results.forEach((r) => this.scene.scoreManager.onQTEResult(r));
+          }
           console.log('[GimmickManager] QTE 결과:', results);
         });
         break;
@@ -183,7 +204,7 @@ export default class GimmickManager {
   _amplifyPattern(events, stage, duration) {
     // 스테이지별 증폭 배율: 1~4면 2.0배, 6~9면 3.0배, 11~14면 4.0배, 16~19면 5.0배
     const tier = Math.floor((stage - 1) / 5);
-    const mult = 2.0 + tier * 1.0;
+    const mult = PATTERN.AMPLIFY_BASE + tier * PATTERN.AMPLIFY_PER_TIER;
 
     const amplified = [];
 
@@ -197,11 +218,11 @@ export default class GimmickManager {
     // 비QTE 이벤트를 복제하여 짧은 시간 오프셋으로 추가 (강한 중첩)
     // floorPattern은 시간 오프셋만 다른 복제가 의미가 없으므로 제외
     const nonQteEvents = events.filter((ev) => ev.type !== 'qte' && ev.type !== 'floorPattern');
-    const extraCount = Math.round(nonQteEvents.length * (mult - 1));
+    const extraCount = Math.round(nonQteEvents.length * (mult - 1) * PATTERN.EXTRA_EVENT_FACTOR);
 
     for (let i = 0; i < extraCount; i++) {
       const src = nonQteEvents[i % nonQteEvents.length];
-      const offset = 0.3 + Math.random() * 1.5; // 0.3~1.8초 오프셋 (더 촘촘)
+      const offset = PATTERN.EXTRA_OFFSET_MIN + Math.random() * (PATTERN.EXTRA_OFFSET_MAX - PATTERN.EXTRA_OFFSET_MIN);
       const newTime = Math.min(src.time + offset, duration - 1);
       const copy = { time: parseFloat(newTime.toFixed(1)), type: src.type, params: { ...src.params } };
       this._hardenParams(copy, stage);
@@ -209,7 +230,7 @@ export default class GimmickManager {
     }
 
     // QTE를 일정 간격으로 삽입 (모든 스테이지에서 적극적으로)
-    const qteInterval = Math.max(4, 8 - tier); // 스테이지 높을수록 더 자주 (8초→4초 간격)
+    const qteInterval = Math.max(PATTERN.AUTO_QTE_MIN_INTERVAL, PATTERN.AUTO_QTE_BASE_INTERVAL - tier);
     for (let t = 3; t < duration - 3; t += qteInterval) {
       const hasQte = amplified.some((ev) => ev.type === 'qte' && Math.abs(ev.time - t) < qteInterval * 0.5);
       if (!hasQte) {
@@ -223,21 +244,22 @@ export default class GimmickManager {
 
     // 빈 시간대에 랜덤 기믹 이벤트 삽입
     amplified.sort((a, b) => a.time - b.time);
-    const fillers = [];
-    const gimmickTypes = ['floor', 'bullet', 'laser'];
-    for (let t = 1; t < duration - 1; t += 0.8) {
-      const hasEvent = amplified.some((ev) => Math.abs(ev.time - t) < 1.0);
-      if (!hasEvent) {
-        const type = gimmickTypes[Math.floor(Math.random() * gimmickTypes.length)];
-        fillers.push({
-          time: parseFloat(t.toFixed(1)),
-          type: type,
-          params: this._generateRandomParams(type, stage),
-        });
+    if (PATTERN.ENABLE_FILLER_EVENTS) {
+      const fillers = [];
+      const gimmickTypes = ['floor', 'bullet', 'laser'];
+      for (let t = 1; t < duration - 1; t += PATTERN.FILLER_SCAN_STEP) {
+        const hasEvent = amplified.some((ev) => Math.abs(ev.time - t) < PATTERN.FILLER_GAP_THRESHOLD);
+        if (!hasEvent) {
+          const type = gimmickTypes[Math.floor(Math.random() * gimmickTypes.length)];
+          fillers.push({
+            time: parseFloat(t.toFixed(1)),
+            type: type,
+            params: this._generateRandomParams(type, stage),
+          });
+        }
       }
+      amplified.push(...fillers);
     }
-
-    amplified.push(...fillers);
     amplified.sort((a, b) => a.time - b.time);
     return amplified;
   }

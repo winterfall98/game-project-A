@@ -13,6 +13,7 @@ export default class FloorManager {
     this.scene = scene;
     /** @type {Array} */
     this.activeFloors = [];
+    this.minFloorSize = 24;
   }
 
   /**
@@ -31,6 +32,9 @@ export default class FloorManager {
    * @param {number} [params.growScale=1.8] - 최대 확대 비율 (growing용)
    */
   spawn(params) {
+    if (this.scene.stageCleared || this.scene._waitingForNext) return;
+    if (this.scene.player && !this.scene.player.isAlive) return;
+
     const {
       x, y, width, height,
       warningTime = 1500,
@@ -41,16 +45,19 @@ export default class FloorManager {
       growScale = 1.8,
     } = params;
 
+    const safeWidth = Math.max(this.minFloorSize, width);
+    const safeHeight = Math.max(this.minFloorSize, height);
     const gfx = this.scene.add.graphics();
 
     const floor = {
       gfx,
-      x, y, width, height,
+      x, y, width: safeWidth, height: safeHeight,
       shape,
       variant,
       phase: 'warning',
       isActive: false,
       destroyed: false,
+      didDamage: false,
     };
 
     this.activeFloors.push(floor);
@@ -102,7 +109,7 @@ export default class FloorManager {
           targets: floor.gfx,
           alpha: 0,
           duration: 300,
-          onComplete: () => this._destroyFloor(floor),
+          onComplete: () => this._destroyFloor(floor, 'expired'),
         });
       });
     });
@@ -136,8 +143,8 @@ export default class FloorManager {
 
         this.scene.tweens.add({
           targets: floor,
-          width: origW * 0.3,
-          height: origH * 0.3,
+          width: Math.max(this.minFloorSize, origW * 0.3),
+          height: Math.max(this.minFloorSize, origH * 0.3),
           duration: activeTime * 0.8,
           ease: 'Power2',
           onUpdate: () => {
@@ -190,10 +197,10 @@ export default class FloorManager {
   /**
    * 플레이어와 활성 장판 충돌 체크 (매 프레임 호출)
    * @param {Player} player
-   * @returns {boolean}
+   * @returns {object|null}
    */
   checkCollision(player) {
-    if (!player.isAlive || player.isInvincible) return false;
+    if (!player.isAlive || player.isInvincible) return null;
 
     for (const floor of this.activeFloors) {
       if (!floor.isActive) continue;
@@ -203,30 +210,38 @@ export default class FloorManager {
 
       if (floor.shape === 'circle') {
         const dist = Phaser.Math.Distance.Between(px, py, floor.x, floor.y);
-        if (dist < floor.width / 2) return true;
+        if (dist < floor.width / 2) return floor;
       } else {
         const halfW = floor.width / 2;
         const halfH = floor.height / 2;
         if (px > floor.x - halfW && px < floor.x + halfW &&
             py > floor.y - halfH && py < floor.y + halfH) {
-          return true;
+          return floor;
         }
       }
     }
-    return false;
+    return null;
   }
 
-  _destroyFloor(floor) {
+  _destroyFloor(floor, reason = 'cleared') {
     floor.destroyed = true;
     floor.isActive = false;
+    if (reason === 'expired' && !floor.didDamage) {
+      this.scene.events.emit('gimmickDodged', { type: 'floor' });
+    }
     if (floor.gfx) floor.gfx.destroy();
     const idx = this.activeFloors.indexOf(floor);
     if (idx !== -1) this.activeFloors.splice(idx, 1);
   }
 
   clearAll() {
-    [...this.activeFloors].forEach((f) => this._destroyFloor(f));
+    [...this.activeFloors].forEach((f) => this._destroyFloor(f, 'cleared'));
     this.activeFloors = [];
+  }
+
+  markDamaged(floor) {
+    if (!floor) return;
+    floor.didDamage = true;
   }
 
   get count() {
