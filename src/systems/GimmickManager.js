@@ -171,22 +171,43 @@ export default class GimmickManager {
         break;
       }
       case 'laser': {
-        // 40% 확률로 캐릭터 정중앙 관통, 60%는 근접 통과
+        const len = Math.max(GAME_WIDTH, GAME_HEIGHT);
         const direct = Math.random() < 0.4;
         const offsetX = direct ? rand(-10, 10) : rand(-100, 100);
         const offsetY = direct ? rand(-10, 10) : rand(-100, 100);
         const cx = clampX(px + offsetX);
         const cy = clampY(py + offsetY);
+
+        if (params.bendX !== undefined) {
+          // 꺾임 레이저는 L자(직각)에 가깝게 생성해 직선 레이저와 체감 차이를 만든다.
+          const horizontalFirst = Math.random() < 0.5;
+          const dir1 = Math.random() < 0.5 ? -1 : 1;
+          const dir2 = Math.random() < 0.5 ? -1 : 1;
+          const bx = Math.round(cx);
+          const by = Math.round(cy);
+
+          if (horizontalFirst) {
+            params.startX = Math.round(bx - dir1 * len);
+            params.startY = by;
+            params.endX = bx;
+            params.endY = Math.round(by + dir2 * len);
+          } else {
+            params.startX = bx;
+            params.startY = Math.round(by - dir1 * len);
+            params.endX = Math.round(bx + dir2 * len);
+            params.endY = by;
+          }
+
+          params.bendX = bx;
+          params.bendY = by;
+          break;
+        }
+
         const angle = rand(0, Math.PI);
-        const len = Math.max(GAME_WIDTH, GAME_HEIGHT);
         params.startX = Math.round(cx - Math.cos(angle) * len);
         params.startY = Math.round(cy - Math.sin(angle) * len);
         params.endX = Math.round(cx + Math.cos(angle) * len);
         params.endY = Math.round(cy + Math.sin(angle) * len);
-        if (params.bendX !== undefined) {
-          params.bendX = clampX(cx + rand(-40, 40));
-          params.bendY = clampY(cy + rand(-40, 40));
-        }
         break;
       }
       // QTE는 위치 무관

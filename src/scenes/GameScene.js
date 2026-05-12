@@ -243,7 +243,7 @@ export default class GameScene extends Phaser.Scene {
         this.player.dodge();
       }
 
-      if (this.touchControls.consumeBomb() && !this.qteManager.isActive) {
+      if (this.touchControls.consumeBomb()) {
         this.qteManager.useBomb(() => {
           this.laserManager.clearAll();
           this.bulletManager.clearAll();
@@ -272,7 +272,7 @@ export default class GameScene extends Phaser.Scene {
       this.player.move(mx, my);
       var dp = this.dodgeKey==='SHIFT' ? Phaser.Input.Keyboard.JustDown(this.shiftKey) : Phaser.Input.Keyboard.JustDown(this.spaceKey);
       if (dp) this.player.dodge();
-      if (Phaser.Input.Keyboard.JustDown(this.bombKey) && !this.qteManager.isActive) {
+      if (Phaser.Input.Keyboard.JustDown(this.bombKey)) {
         this.qteManager.useBomb(this.gimmickManager.clearAllGimmicks.bind(this.gimmickManager));
       }
     }

@@ -579,6 +579,8 @@ export default class BossScene extends Phaser.Scene {
   }
 
   handleInput() {
+    if (this._waitingForNext) return;
+
     if (this.mobileMode && this.touchControls) {
       const move = this.touchControls.getMovement();
       this.player.move(move.x, move.y);
@@ -587,7 +589,7 @@ export default class BossScene extends Phaser.Scene {
         this.player.dodge();
       }
 
-      if (this.touchControls.consumeBomb() && !this.qteManager.isActive) {
+      if (this.touchControls.consumeBomb()) {
         this.qteManager.useBomb(() => {
           this.laserManager.clearAll();
           this.bulletManager.clearAll();
@@ -626,17 +628,15 @@ export default class BossScene extends Phaser.Scene {
       if (dodgePressed) this.player.dodge();
 
       if (Phaser.Input.Keyboard.JustDown(this.bombKey)) {
-        if (!this.qteManager.isActive) {
-          this.qteManager.useBomb(() => {
-            this.laserManager.clearAll();
-            this.bulletManager.clearAll();
-            this.floorManager.clearAll();
-            // 보스는 사라지지 않지만, QTE 1회 분량 데미지를 입힘
-            if (this.boss && this.boss.isAlive) {
-              this.boss.takeDamage(this.bossConfig.qteDamage || 0);
-            }
-          });
-        }
+        this.qteManager.useBomb(() => {
+          this.laserManager.clearAll();
+          this.bulletManager.clearAll();
+          this.floorManager.clearAll();
+          // 보스는 사라지지 않지만, QTE 1회 분량 데미지를 입힘
+          if (this.boss && this.boss.isAlive) {
+            this.boss.takeDamage(this.bossConfig.qteDamage || 0);
+          }
+        });
       }
     }
   }

@@ -355,7 +355,7 @@ export default class QTEManager {
         this.greatCombo = 0;
         // Fail → 데미지
         if (this.player && this.player.isAlive) {
-          this.player.takeDamage(10);
+          this.player.takeDamage(5);
         }
         break;
     }
@@ -482,6 +482,11 @@ export default class QTEManager {
 
     this.bombs--;
     this.scene.events.emit('updateBombs', { count: this.bombs });
+
+    // QTE 진행 중이어도 폭탄은 즉시 발동되도록 현재 QTE를 중단한다.
+    if (this.isActive || this.currentQTE) {
+      this.cancel();
+    }
 
     // 부드러운 청록 ring 효과 — 흰 강렬 플래시 대신 외곽으로 퍼지는 ring으로 교체
     // (눈에 부담을 주지 않는 선의 가시성 확보)
