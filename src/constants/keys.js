@@ -11,9 +11,9 @@ export const QTE_KEYS_ARROWS = ['Q', 'W', 'E', 'R', 'A', 'S', 'D', 'F', 'ONE', '
 
 // WASD 모드 QTE 키 (왼손이 이동(WASD), 오른손은 키보드 오른쪽 영역 12개)
 export const QTE_KEYS_WASD = [
-  'EIGHT', 'NINE', 'ZERO', 'MINUS',
-  'I', 'O', 'P', 'OPEN_BRACKET',
-  'K', 'L', 'SEMICOLON', 'QUOTES',
+  'SEVEN', 'EIGHT', 'NINE', 'ZERO',
+  'U', 'I', 'O', 'P',
+  'J', 'K', 'L',
 ];
 
 // 키 표시 이름 매핑
@@ -23,7 +23,7 @@ export const KEY_DISPLAY_NAMES = {
   A: 'A', S: 'S', D: 'D', F: 'F',
   ONE: '1', TWO: '2', THREE: '3', FOUR: '4',
   // wasd 모드 (오른손)
-  EIGHT: '8', NINE: '9', ZERO: '0', MINUS: '-',
-  I: 'I', O: 'O', P: 'P', OPEN_BRACKET: '[',
-  K: 'K', L: 'L', SEMICOLON: ';', QUOTES: "'",
+  SEVEN: '7', EIGHT: '8', NINE: '9', ZERO: '0',
+  U: 'U', I: 'I', O: 'O', P: 'P',
+  J: 'J', K: 'K', L: 'L',
 };
