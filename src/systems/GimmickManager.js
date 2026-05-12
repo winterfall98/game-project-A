@@ -158,15 +158,21 @@ export default class GimmickManager {
         break;
       }
       case 'bullet': {
-        // 발사 원점을 가장자리에서 랜덤, 플레이어 직격 방향
-        const side = Math.floor(Math.random() * 4);
-        if (side === 0) { params.originX = rand(0, GAME_WIDTH); params.originY = -10; }
-        else if (side === 1) { params.originX = rand(0, GAME_WIDTH); params.originY = GAME_HEIGHT + 10; }
-        else if (side === 2) { params.originX = -10; params.originY = rand(0, GAME_HEIGHT); }
-        else { params.originX = GAME_WIDTH + 10; params.originY = rand(0, GAME_HEIGHT); }
+        // 화면 바깥 시작 빈도를 줄이고, 화면 내부 시작을 더 자주 사용
+        const fromEdge = Math.random() < 0.35;
+        if (fromEdge) {
+          const side = Math.floor(Math.random() * 4);
+          if (side === 0) { params.originX = rand(0, GAME_WIDTH); params.originY = -10; }
+          else if (side === 1) { params.originX = rand(0, GAME_WIDTH); params.originY = GAME_HEIGHT + 10; }
+          else if (side === 2) { params.originX = -10; params.originY = rand(0, GAME_HEIGHT); }
+          else { params.originX = GAME_WIDTH + 10; params.originY = rand(0, GAME_HEIGHT); }
+        } else {
+          params.originX = rand(60, GAME_WIDTH - 60);
+          params.originY = rand(60, GAME_HEIGHT - 60);
+        }
         // 플레이어 방향으로 정확히 (약간의 산포)
         params.direction = Phaser.Math.RadToDeg(
-          Math.atan2(py + rand(-40, 40) - params.originY, px + rand(-40, 40) - params.originX)
+          Math.atan2(py + rand(-30, 30) - params.originY, px + rand(-30, 30) - params.originX)
         );
         break;
       }
@@ -303,7 +309,7 @@ export default class GimmickManager {
       case 'bullet':
         // 탄환: 수 증가, 속도 증가
         p.count = Math.round((p.count || 5) * factor);
-        p.speed = Math.round((p.speed || 160) * (1.0 + stage * 0.02));
+        p.speed = Math.round((p.speed || 160) * (1.08 + stage * 0.02));
         break;
       case 'laser':
         // 레이저: 경고시간 단축, 굵기 증가
@@ -337,10 +343,10 @@ export default class GimmickManager {
       case 'bullet':
         return {
           type: ['fan', 'circle', 'circle'][Math.floor(Math.random() * 3)],
-          originX: rand(80, GAME_WIDTH - 80),
-          originY: Math.random() > 0.5 ? -10 : GAME_HEIGHT + 10,
+          originX: rand(60, GAME_WIDTH - 60),
+          originY: Math.random() < 0.35 ? (Math.random() > 0.5 ? -10 : GAME_HEIGHT + 10) : rand(60, GAME_HEIGHT - 60),
           count: Math.round(5 + stage * 0.7),
-          speed: speed,
+          speed: Math.round(speed * 1.12),
           angle: rand(35, 70),
           direction: 270,
           delay: 0,

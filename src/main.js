@@ -7,6 +7,8 @@ import PauseScene from './scenes/PauseScene.js';
 import { GAME_WIDTH, GAME_HEIGHT, STAGE } from './constants/game.js';
 import { initUI } from './ui/intro.js';
 import { showResultScreen } from './ui/result.js';
+import { gameFlowBus, GAME_FLOW_EVENTS } from './flow/gameFlowBus.js';
+import { createGameFlowService } from './flow/gameFlowService.js';
 
 var config = {
   type: Phaser.AUTO, width: GAME_WIDTH, height: GAME_HEIGHT,
@@ -18,52 +20,60 @@ var config = {
 };
 
 var game = new Phaser.Game(config);
-var session = { mode: 'normal', controlMode: 'arrows', dodgeKey: 'SHIFT', mobileMode: false, touchControlScale: 1.0 };
+var gameFlowService = createGameFlowService();
 
 function setupComm(game) {
-  game.events.on('gameReady', function() {
-    document.getElementById('game-container').style.display = 'none';
-    document.getElementById('intro-screen').style.display = 'flex';
-  });
-  game.events.on('bossClear', function(data) {
-    var next = data.stage + 1;
-    if (next > STAGE.TOTAL) { game.events.emit('gameEnd', data); return; }
+  function stopRuntimeScenes() {
+    game.scene.stop('PauseScene');
+    game.scene.stop('GameScene');
     game.scene.stop('BossScene');
     game.scene.stop('UIScene');
-    game.scene.start('GameScene', {
-      mode: session.mode, controlMode: session.controlMode, dodgeKey: session.dodgeKey,
-      mobileMode: session.mobileMode, touchControlScale: session.touchControlScale,
-      stage: next, playerHP: data.playerHP || 100, totalScore: data.score || 0,
-    });
-  });
-  game.events.on('gameEnd', function(r) {
-    game.scene.stop('PauseScene'); game.scene.stop('GameScene'); game.scene.stop('BossScene'); game.scene.stop('UIScene');
+  }
+
+  function showIntroScreen() {
     document.getElementById('game-container').style.display = 'none';
-    showResultScreen(r);
-  });
-  window.startGame = function(mode, settings, startStage) {
-    var stage = startStage || 1;
-    session = { mode: mode, controlMode: settings.controlMode, dodgeKey: settings.dodgeKey, mobileMode: false, touchControlScale: 1.0 };
-    const mobileSetting = settings.mobileMode;
-    session.mobileMode = mobileSetting !== null && mobileSetting !== undefined
-      ? mobileSetting
-      : (navigator.maxTouchPoints > 0);
-    session.touchControlScale = settings.touchControlScale || 1.0;
+    document.getElementById('result-screen').style.display = 'none';
+    document.getElementById('intro-screen').style.display = 'flex';
+  }
+
+  function showGameScreen() {
     document.getElementById('intro-screen').style.display = 'none';
     document.getElementById('result-screen').style.display = 'none';
     document.getElementById('game-container').style.display = 'block';
-    var sceneData = { mode: mode, controlMode: settings.controlMode, dodgeKey: settings.dodgeKey, mobileMode: session.mobileMode, touchControlScale: session.touchControlScale, stage: stage };
+  }
+
+  function startStage(stage) {
+    const sceneData = gameFlowService.buildSceneData(stage);
     if (STAGE.BOSS_STAGES.includes(stage)) {
       game.scene.start('BossScene', sceneData);
     } else {
       game.scene.start('GameScene', sceneData);
     }
-  };
-  window.returnToIntro = function() {
-    game.scene.stop('PauseScene'); game.scene.stop('GameScene'); game.scene.stop('BossScene'); game.scene.stop('UIScene');
+  }
+
+  gameFlowBus.on(GAME_FLOW_EVENTS.START_REQUESTED, function(payload) {
+    const mode = payload && payload.mode ? payload.mode : 'normal';
+    const settings = payload && payload.settings ? payload.settings : {};
+    const stage = payload && payload.startStage ? payload.startStage : 1;
+
+    gameFlowService.setSessionFromStartRequest(mode, settings);
+    showGameScreen();
+    startStage(stage);
+  });
+
+  gameFlowBus.on(GAME_FLOW_EVENTS.RETURN_TO_INTRO_REQUESTED, function() {
+    stopRuntimeScenes();
+    showIntroScreen();
+  });
+
+  game.events.on('gameReady', function() {
+    showIntroScreen();
+  });
+
+  game.events.on('gameEnd', function(r) {
+    stopRuntimeScenes();
     document.getElementById('game-container').style.display = 'none';
-    document.getElementById('result-screen').style.display = 'none';
-    document.getElementById('intro-screen').style.display = 'flex';
-  };
+    showResultScreen(r);
+  });
 }
 initUI();

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../constants/game.js';
+import { gameFlowBus, GAME_FLOW_EVENTS } from '../flow/gameFlowBus.js';
 
 /**
  * PauseScene - 일시정지 오버레이
@@ -48,8 +49,8 @@ export default class PauseScene extends Phaser.Scene {
   }
 
   _returnToMain() {
-    // returnToIntro가 GameScene/BossScene/UIScene을 stop하므로 PauseScene만 정리
+    // 메인 복귀는 flow 이벤트로 위임
     this.scene.stop('PauseScene');
-    if (window.returnToIntro) window.returnToIntro();
+    gameFlowBus.emit(GAME_FLOW_EVENTS.RETURN_TO_INTRO_REQUESTED);
   }
 }

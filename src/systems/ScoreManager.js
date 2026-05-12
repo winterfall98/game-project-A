@@ -47,6 +47,70 @@ export default class ScoreManager {
   }
 
   /**
+   * 이전 스테이지 누적 상태를 복원한다.
+   * @param {object|null} state
+   */
+  importState(state) {
+    if (!state) return;
+    this.survivalScore = state.survivalScore || 0;
+    this.bulletDodgeScore = state.bulletDodgeScore || 0;
+    this.laserDodgeScore = state.laserDodgeScore || 0;
+    this.floorDodgeScore = state.floorDodgeScore || 0;
+    this.qteScore = state.qteScore || 0;
+    this.stageClearScore = state.stageClearScore || 0;
+    this.bossKillScore = state.bossKillScore || 0;
+
+    this.bulletsDodged = state.bulletsDodged || 0;
+    this.lasersDodged = state.lasersDodged || 0;
+    this.floorsDodged = state.floorsDodged || 0;
+
+    this.currentCombo = state.currentCombo || 0;
+    this.maxCombo = state.maxCombo || 0;
+    this.comboMultiplier = this._calcComboMultiplier();
+
+    this.stageDamageTaken = !!state.stageDamageTaken;
+    this.noDamageStages = state.noDamageStages || 0;
+    this.damageByType = state.damageByType
+      ? { ...state.damageByType }
+      : { bullet: 0, laser: 0, floor: 0, other: 0 };
+
+    this.totalGreat = state.totalGreat || 0;
+    this.totalGood = state.totalGood || 0;
+    this.totalFail = state.totalFail || 0;
+
+    this.carryOverScore = state.carryOverScore || 0;
+  }
+
+  /**
+   * 다음 스테이지로 전달할 누적 상태를 반환한다.
+   * @returns {object}
+   */
+  exportState() {
+    return {
+      survivalScore: this.survivalScore,
+      bulletDodgeScore: this.bulletDodgeScore,
+      laserDodgeScore: this.laserDodgeScore,
+      floorDodgeScore: this.floorDodgeScore,
+      qteScore: this.qteScore,
+      stageClearScore: this.stageClearScore,
+      bossKillScore: this.bossKillScore,
+      bulletsDodged: this.bulletsDodged,
+      lasersDodged: this.lasersDodged,
+      floorsDodged: this.floorsDodged,
+      currentCombo: this.currentCombo,
+      maxCombo: this.maxCombo,
+      comboMultiplier: this.comboMultiplier,
+      stageDamageTaken: this.stageDamageTaken,
+      noDamageStages: this.noDamageStages,
+      damageByType: { ...this.damageByType },
+      totalGreat: this.totalGreat,
+      totalGood: this.totalGood,
+      totalFail: this.totalFail,
+      carryOverScore: this.carryOverScore,
+    };
+  }
+
+  /**
    * Start survival score timer (call on stage start)
    */
   startSurvivalTimer() {
@@ -131,11 +195,6 @@ export default class ScoreManager {
     }
     // Reset per-stage tracking
     this.stageDamageTaken = false;
-    this._emitUpdate();
-  }
-
-  onBossKill() {
-    this.bossKillScore += SCORE.BOSS_KILL;
     this._emitUpdate();
   }
 

@@ -11,8 +11,8 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../constants/game.js';
  */
 const BOSS_1 = {
   bossIndex: 0,
-  maxHP: 400,
-  attackCooldown: { min: 2500, max: 4000 },
+  maxHP: 520,
+  attackCooldown: { min: 1800, max: 3200 },
   // 평상시 부딪힘 데미지 (charge 시는 attacks.charge.damage 사용)
   contactDamage: 5,
   // 플레이어 추적 속도 (px/s, phases[i].speedMult로 곱해짐)
@@ -38,7 +38,7 @@ const BOSS_1 = {
       angle: 160,
     },
   },
-  qteInterval: 10000,
+  qteInterval: 7000,
   qteDamage: 40,
   qteCount: 3,
   qteTiming: 1500,
@@ -50,8 +50,8 @@ const BOSS_1 = {
  */
 const BOSS_2 = {
   bossIndex: 1,
-  maxHP: 600,
-  attackCooldown: { min: 2000, max: 3500 },
+  maxHP: 800,
+  attackCooldown: { min: 1500, max: 2800 },
   contactDamage: 8,
   chaseSpeed: 75,
   floorPattern: { interval: 7000, group: 'growth' },
@@ -81,7 +81,7 @@ const BOSS_2 = {
     },
     circle_bullets: { count: 20, speed: 140 },
   },
-  qteInterval: 8000,
+  qteInterval: 5500,
   qteDamage: 50,
   qteCount: 3,
   qteTiming: 1400,
@@ -93,8 +93,8 @@ const BOSS_2 = {
  */
 const BOSS_3 = {
   bossIndex: 2,
-  maxHP: 800,
-  attackCooldown: { min: 1800, max: 3000 },
+  maxHP: 1100,
+  attackCooldown: { min: 1300, max: 2400 },
   contactDamage: 12,
   chaseSpeed: 90,
   floorPattern: { interval: 6000, group: 'challenge' },
@@ -124,7 +124,7 @@ const BOSS_3 = {
     multi_laser: { count: 3, width: 20, warningTime: 800, activeTime: 600 },
     floor: { width: 130, height: 130, warningTime: 1000, activeTime: 1200 },
   },
-  qteInterval: 7000,
+  qteInterval: 4800,
   qteDamage: 60,
   qteCount: 4,
   qteTiming: 1300,
@@ -136,8 +136,8 @@ const BOSS_3 = {
  */
 const BOSS_4 = {
   bossIndex: 3,
-  maxHP: 1000,
-  attackCooldown: { min: 1500, max: 2500 },
+  maxHP: 1400,
+  attackCooldown: { min: 1100, max: 2000 },
   timeLimit: 90,
   arenaShrink: true,
   contactDamage: 15,
@@ -175,7 +175,7 @@ const BOSS_4 = {
     floor: { width: 140, height: 140, warningTime: 900, activeTime: 1500 },
     barrage: { count: 32, speed: 200 },
   },
-  qteInterval: 6000,
+  qteInterval: 4200,
   qteDamage: 80,
   qteCount: 5,
   qteTiming: 1100,

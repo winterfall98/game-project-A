@@ -13,6 +13,10 @@ src/
 ├── main.js                     # 진입점. Phaser.Game 생성, 씬 등록, 전역 이벤트 라우팅
 ├── CLAUDE.md                   # 코딩 가이드라인
 │
+├── flow/
+│   ├── gameFlowBus.js          # UI ↔ 런타임 전환 요청 이벤트 버스
+│   └── gameFlowService.js      # 세션 상태(mode/control/mobile/stage) 관리
+│
 ├── constants/
 │   ├── game.js                 # 게임 전역 상수 (치수, 스탯, 점수, 색상, 스테이지 설정)
 │   └── keys.js                 # 키 매핑 (arrows / wasd 두 종 QTE 키풀, 표시명)
@@ -20,16 +24,14 @@ src/
 ├── utils/
 │   ├── settings.js             # localStorage 기반 설정 저장/불러오기
 │   ├── effects.js              # 시각 이펙트 (파티클, 잔상, 피격 플래시)
-│   └── math.js                 # 수학 유틸리티
 │
 ├── entities/
 │   ├── Player.js               # 플레이어 엔티티 (이동, 구르기, HP, 스태미나)
 │   ├── Boss.js                 # 보스 엔티티 (FSM AI, 페이즈, HP 바)
-│   ├── Bullet.js               # 탄환 엔티티
-│   ├── Laser.js                # 레이저 엔티티
-│   └── Floor.js                # 바닥 장판 엔티티
 │
 ├── systems/
+│   ├── CombatInputController.js # Game/Boss 공용 입력 처리 (키보드/터치/폭탄/F10)
+│   ├── PauseFlow.js            # Game/Boss 공용 일시정지 플로우
 │   ├── GimmickManager.js       # 패턴 스케줄러 + 난이도 증폭 엔진
 │   ├── QTEManager.js           # QTE 시퀀스 관리, 판정, 폭탄 시스템
 │   ├── BulletManager.js        # 탄환 오브젝트 풀, 발사 패턴 엔진
@@ -46,7 +48,13 @@ src/
 │   └── PauseScene.js           # 일시정지 오버레이 (재개/메인 복귀)
 │
 ├── patterns/
-│   ├── stagePatterns.js        # 스테이지 1~20 이벤트 타임라인 + 무작위 floor 패턴 burst
+│   ├── stagePatterns.js        # 스테이지 패턴 집계 + floor burst 주입 + 조회 API
+│   ├── stages/
+│   │   ├── introStages.js      # STAGE_1..5
+│   │   ├── growthStages.js     # STAGE_6..10
+│   │   ├── challengeStages.js  # STAGE_11..15
+│   │   ├── hellStages.js       # STAGE_16..20
+│   │   └── stageConfigs.js     # STAGE_CONFIGS
 │   ├── stage1.js               # (참고용) 스테이지 1 패턴 데이터
 │   ├── floorPatterns.js        # 복합 floor 패턴 5종 + 튜닝 상수 + 헬퍼
 │   └── bossConfigs.js          # 보스 1~4 설정 (HP, 페이즈, 공격, contact damage, chase, floor pattern)
@@ -68,7 +76,7 @@ src/
     │ gameReady 이벤트
     ▼
 [인트로 화면] (DOM)
-    │ window.startGame(mode, settings, startStage)
+    │ flow:start-requested 이벤트 emit
     ▼
 [GameScene] ─────────────────────────────────────────────┐
     │ 스테이지 클리어                                     │
@@ -259,7 +267,7 @@ Cross-scene listener cleanup — UIScene이 자기 events가 아니라 **다른 
 
 ### PauseScene (scenes/PauseScene.js)
 
-반투명 검정 오버레이 위에 "PAUSED" 텍스트, "RESUME (F10)" 버튼, "RETURN TO MAIN" 버튼을 표시한다. F10 키 또는 Resume 클릭 시 `onResume` 콜백을 호출하고, Return to Main 클릭 시 `window.returnToIntro()`를 호출한다.
+반투명 검정 오버레이 위에 "PAUSED" 텍스트, "RESUME (F10)" 버튼, "RETURN TO MAIN" 버튼을 표시한다. F10 키 또는 Resume 클릭 시 `onResume` 콜백을 호출하고, Return to Main 클릭 시 `flow:return-to-intro-requested` 이벤트를 emit한다.
 
 ---
 
@@ -267,7 +275,16 @@ Cross-scene listener cleanup — UIScene이 자기 events가 아니라 **다른 
 
 ### stagePatterns.js
 
-각 스테이지는 다음 형태의 객체로 정의된다.
+현재 구조는 **집계 파일 + 구간 파일 분리**다.
+
+- `patterns/stages/introStages.js`: STAGE_1..5
+- `patterns/stages/growthStages.js`: STAGE_6..10
+- `patterns/stages/challengeStages.js`: STAGE_11..15
+- `patterns/stages/hellStages.js`: STAGE_16..20
+- `patterns/stages/stageConfigs.js`: STAGE_CONFIGS
+- `patterns/stagePatterns.js`: 위 모듈 import 후 `STAGE_PATTERNS` 조합 + floor burst 주입 + `getStagePattern` export
+
+각 스테이지 객체는 다음 형태를 따른다.
 
 ```js
 {
@@ -286,7 +303,7 @@ Cross-scene listener cleanup — UIScene이 자기 events가 아니라 **다른 
 
 실제 게임플레이에서는 이 원본 데이터가 GimmickManager의 `_amplifyPattern`에 의해 이벤트가 2~5배로 증가되고, `_randomizeParams`에 의해 플레이어 위치 기반으로 좌표가 동적 변환된다.
 
-복합 floor 패턴 burst — `STAGE_PATTERNS` 정의 직후의 한 블록에서 16개 정상 스테이지 각각에 `STAGE_N.events.push(...randomFloorPatternEvents('group', { count, endTime }))`로 floorPattern 이벤트를 추가한다. 모듈 로드 시점에 무작위로 셔플되므로 페이지 새로고침마다 새 mix가 생성된다. 스테이지별 `count`는 tutorial 6 / growth 8 / challenge 10 / hell 14, `endTime`은 각 그룹의 duration보다 약 2초 일찍이다(마지막 패턴의 warning+active이 stage clear 직전에 마무리되도록).
+복합 floor 패턴 burst — `stagePatterns.js`에서 16개 정상 스테이지 각각에 `STAGE_N.events.push(...randomFloorPatternEvents('group', { count, endTime }))`로 floorPattern 이벤트를 추가한다. 모듈 로드 시점에 무작위로 셔플되므로 페이지 새로고침마다 새 mix가 생성된다. 스테이지별 `count`는 tutorial 4 / growth 6 / challenge 8 / hell 12이다.
 
 ### bossConfigs.js
 
@@ -344,7 +361,9 @@ QTE는 프롬프트를 직접 탭하는 방식이다. 프롬프트는 플레이�
 
 ## 이벤트 시스템
 
-전역 이벤트(`game.events`)로 gameReady(부팅 완료 → 인트로 표시), bossClear(보스 처치 → 다음 스테이지, fallback용), gameEnd(게임 종료 → 결과 화면), gameStarted/bossStarted(씬 시작 알림)가 있다.
+런타임 이벤트(`game.events`)로 gameReady(부팅 완료 → 인트로 표시), gameEnd(게임 종료 → 결과 화면), gameStarted/bossStarted(씬 시작 알림)가 있다.
+
+플로우 이벤트(`flow/gameFlowBus.js`)로 `flow:start-requested`(인트로 START 요청), `flow:return-to-intro-requested`(결과/일시정지에서 메인 복귀 요청)가 있다.
 
 씬 이벤트(`scene.events`)로 updateHP/updateStamina/updateScore/updateCombo/updateBombs/updateMultiplier(UIScene 갱신용), playerDeath(사망 처리)가 있다.
 
@@ -382,8 +401,8 @@ QTE 판정 관련으로 GREAT_THRESHOLD는 ±0.05, GOOD_THRESHOLD는 ±0.15, GRE
 | **그룹별 패턴 강도** | `patterns/floorPatterns.js` → `DIFFICULTY_TUNING.<group>` |
 | **그룹에 어떤 패턴이 등장할지** | `patterns/floorPatterns.js` → `GROUP_PATTERN_POOLS.<group>` |
 | **스테이지별 패턴 빈도/시간 범위** | `patterns/stagePatterns.js` → 해당 스테이지의 `count` / `endTime` |
-| 스테이지별 바닐라 이벤트(floor/bullet/laser/qte) 타임라인 | `patterns/stagePatterns.js` → `STAGE_N` |
-| 스테이지별 난이도 곱(탄환 속도/수, 경고 시간) | `patterns/stagePatterns.js` → `STAGE_CONFIGS` |
+| 스테이지별 바닐라 이벤트(floor/bullet/laser/qte) 타임라인 | `patterns/stages/*Stages.js` → `STAGE_N` |
+| 스테이지별 난이도 곱(탄환 속도/수, 경고 시간) | `patterns/stages/stageConfigs.js` → `STAGE_CONFIGS` |
 | 노말 모드 증폭 강도 | `systems/GimmickManager.js` → `_amplifyPattern`, `_hardenParams` |
 | 보스 HP/페이즈/공격 패턴 | `patterns/bossConfigs.js` |
 | **보스 contact damage / chase speed / floor pattern interval & group** | `patterns/bossConfigs.js` → 각 보스 객체의 신규 필드 |

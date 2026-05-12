@@ -232,10 +232,11 @@ export default class BulletManager {
     const bullet = this._getBullet(x, y);
     if (!bullet) return;
 
+    const tunedSpeed = speed * 1.08;
     const rad = Phaser.Math.DegToRad(angleDeg);
     bullet.body.setVelocity(
-      Math.cos(rad) * speed,
-      Math.sin(rad) * speed
+      Math.cos(rad) * tunedSpeed,
+      Math.sin(rad) * tunedSpeed
     );
 
     // 화면 밖 자동 제거 타이머 (안전장치, 10초)

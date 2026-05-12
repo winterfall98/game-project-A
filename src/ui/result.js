@@ -4,6 +4,7 @@
  * - Detailed stats breakdown
  * - Share button (html2canvas -> PNG download)
  */
+import { gameFlowBus, GAME_FLOW_EVENTS } from '../flow/gameFlowBus.js';
 
 /**
  * Show the result screen
@@ -81,7 +82,7 @@ export function showResultScreen(data) {
 
   // Button events
   document.getElementById('btn-return').addEventListener('click', () => {
-    window.returnToIntro();
+    gameFlowBus.emit(GAME_FLOW_EVENTS.RETURN_TO_INTRO_REQUESTED);
   });
 
   document.getElementById('btn-share').addEventListener('click', () => {

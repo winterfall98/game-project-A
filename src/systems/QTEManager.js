@@ -50,6 +50,33 @@ export default class QTEManager {
     this.mobileMode = mobileMode;
   }
 
+  /**
+   * 스테이지 전환 시 유지할 QTE 상태를 주입
+   * @param {object|null} state
+   */
+  importState(state) {
+    if (!state) return;
+    this.greatCombo = state.greatCombo || 0;
+    this.totalGreat = state.totalGreat || 0;
+    this.totalGood = state.totalGood || 0;
+    this.totalFail = state.totalFail || 0;
+    this.bombs = Math.min(3, state.bombs || 0);
+  }
+
+  /**
+   * 스테이지 전환 시 전달할 QTE 상태를 반환
+   * @returns {object}
+   */
+  exportState() {
+    return {
+      greatCombo: this.greatCombo,
+      totalGreat: this.totalGreat,
+      totalGood: this.totalGood,
+      totalFail: this.totalFail,
+      bombs: Math.min(3, this.bombs),
+    };
+  }
+
   // ═══════════════════════════════════════
   // 시퀀스 관리
   // ═══════════════════════════════════════
@@ -96,7 +123,8 @@ export default class QTEManager {
    * 개별 QTE 프롬프트 생성
    */
   _spawnQTEPrompt(qteData) {
-    const { key, timing = 1500 } = qteData;
+    const { key } = qteData;
+    const timing = this._getAdjustedTiming(qteData.timing || 1500);
 
     // 위치 결정
     const pos = this._getPromptPosition();
@@ -338,9 +366,12 @@ export default class QTEManager {
         }
         // 폭탄 체크
         if (this.greatCombo >= QTE.BOMB_COMBO_REQUIRED && this.greatCombo % QTE.BOMB_COMBO_REQUIRED === 0) {
-          this.bombs++;
-          this.scene.events.emit('updateBombs', { count: this.bombs });
-          this._showBombGet();
+          const nextBombs = Math.min(3, this.bombs + 1);
+          if (nextBombs > this.bombs) {
+            this.bombs = nextBombs;
+            this.scene.events.emit('updateBombs', { count: this.bombs });
+            this._showBombGet();
+          }
         }
         break;
 
@@ -530,6 +561,17 @@ export default class QTEManager {
     if (this.greatCombo >= 10) return 2.0;
     if (this.greatCombo >= 5) return 1.5;
     return 1.0;
+  }
+
+  /**
+   * Stage 11+부터 QTE 타이밍을 약간 가속한다.
+   */
+  _getAdjustedTiming(baseTiming) {
+    const stage = this.scene && this.scene.currentStage ? this.scene.currentStage : 1;
+    if (stage >= 11) {
+      return Math.max(600, Math.round(baseTiming * 0.88));
+    }
+    return baseTiming;
   }
 
   /**

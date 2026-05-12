@@ -3,6 +3,7 @@
  */
 import { loadSettings, saveSettings } from '../utils/settings.js';
 import { STAGE } from '../constants/game.js';
+import { gameFlowBus, GAME_FLOW_EVENTS } from '../flow/gameFlowBus.js';
 
 /**
  * DOM UI 초기화 - 이벤트 바인딩
@@ -26,7 +27,11 @@ export function initUI() {
     // 게임 시작 — normal 모드 단일 (EASY 모드 삭제됨)
     document.getElementById('btn-start').addEventListener('click', () => {
       const currentSettings = loadSettings();
-      window.startGame('normal', currentSettings, getSelectedStage());
+      gameFlowBus.emit(GAME_FLOW_EVENTS.START_REQUESTED, {
+        mode: 'normal',
+        settings: currentSettings,
+        startStage: getSelectedStage(),
+      });
     });
 
     // 옵션 버튼

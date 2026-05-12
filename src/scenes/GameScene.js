@@ -9,6 +9,8 @@ import GimmickManager from '../systems/GimmickManager.js';
 import { getStagePattern } from '../patterns/stagePatterns.js';
 import ScoreManager from '../systems/ScoreManager.js';
 import TouchControls from '../systems/TouchControls.js';
+import CombatInputController from '../systems/CombatInputController.js';
+import PauseFlow from '../systems/PauseFlow.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() { super({ key: 'GameScene' }); }
@@ -20,6 +22,8 @@ export default class GameScene extends Phaser.Scene {
     this.currentStage = data.stage || 1;
     this.playerHP = data.playerHP || PLAYER.MAX_HP;
     this.totalScore = data.totalScore || 0;
+    this.scoreState = data.scoreState || null;
+    this.qteState = data.qteState || null;
     this.mobileMode = data.mobileMode || false;
     this.touchControlScale = data.touchControlScale || 1.0;
     this.stageCleared = false;
@@ -39,17 +43,31 @@ export default class GameScene extends Phaser.Scene {
     this.floorManager = new FloorManager(this);
     this.qteManager = new QTEManager(this, this.player);
     this.qteManager.configure(this.controlMode, this.gameMode, this.mobileMode);
+    this.qteManager.importState(this.qteState);
     this.gimmickManager = new GimmickManager(this, {
       laser: this.laserManager, bullet: this.bulletManager,
       floor: this.floorManager, qte: this.qteManager,
     });
     this.scoreManager = new ScoreManager(this);
-    this.scoreManager.carryOverScore = this.totalScore;
+    if (this.scoreState) {
+      this.scoreManager.importState(this.scoreState);
+    } else {
+      this.scoreManager.carryOverScore = this.totalScore;
+    }
+    this.totalScore = this.scoreManager.displayScore;
     this.scoreManager.startSurvivalTimer();
     this.bulletManager.setupOverlap(this.player, function(p) {
       const took = p.takeDamage(10);
       if (took) this.scoreManager.onDamageTaken('bullet');
     }, this);
+    this.inputController = new CombatInputController(this, {
+      getControlMode: () => this.controlMode,
+      getDodgeKey: () => this.dodgeKey,
+      getMobileMode: () => this.mobileMode,
+      getTouchControls: () => this.touchControls,
+      onBomb: () => this.gimmickManager.clearAllGimmicks(),
+      onPauseToggle: () => this._togglePause(),
+    });
     this._onGimmickDodged = this._onGimmickDodged || this.onGimmickDodged.bind(this);
     this.events.on('gimmickDodged', this._onGimmickDodged);
     this.setupInput();
@@ -70,8 +88,9 @@ export default class GameScene extends Phaser.Scene {
     this.time.delayedCall(0, function() {
       this.events.emit('updateHP', { current: this.player.hp, max: PLAYER.MAX_HP });
       this.events.emit('updateStamina', { current: this.player.stamina, max: PLAYER.MAX_STAMINA });
-      this.events.emit('updateScore', { score: this.totalScore });
+      this.events.emit('updateScore', { score: this.scoreManager.displayScore });
       this.events.emit('updateBombs', { count: this.qteManager.bombs });
+      this.events.emit('updateCombo', { combo: this.scoreManager.currentCombo, multiplier: this.scoreManager.comboMultiplier });
     }, [], this);
     this._loadStagePattern();
     this.events.on('playerDeath', this._onGameOver, this);
@@ -192,9 +211,12 @@ export default class GameScene extends Phaser.Scene {
     }
     this.cameras.main.fadeOut(300, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', function() {
+      const scoreState = this.scoreManager.exportState();
+      const qteState = this.qteManager.exportState();
       var sd = { mode:this.gameMode, controlMode:this.controlMode, dodgeKey:this.dodgeKey,
         stage:next, playerHP:this.player.hp, totalScore:this.totalScore,
-        mobileMode:this.mobileMode, touchControlScale:this.touchControlScale };
+        mobileMode:this.mobileMode, touchControlScale:this.touchControlScale,
+        scoreState:scoreState, qteState:qteState };
       if (STAGE.BOSS_STAGES.includes(next)) {
         this.scene.start('BossScene', sd);
       } else {
@@ -223,59 +245,11 @@ export default class GameScene extends Phaser.Scene {
   }
 
   setupInput() {
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.wasdKeys = this.input.keyboard.addKeys('W,A,S,D');
-    this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
-    this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    this.bombKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Y);
-    this.pauseKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F10);
-    this.pauseKey.on('down', this._togglePause, this);
-    this.input.mouse.disableContextMenu();
+    if (this.inputController) this.inputController.setupInput();
   }
 
   handleInput() {
-    if (this.mobileMode && this.touchControls) {
-      // Touch input
-      const move = this.touchControls.getMovement();
-      this.player.move(move.x, move.y);
-
-      if (this.touchControls.consumeDash()) {
-        this.player.dodge();
-      }
-
-      if (this.touchControls.consumeBomb()) {
-        this.qteManager.useBomb(() => {
-          this.laserManager.clearAll();
-          this.bulletManager.clearAll();
-          this.floorManager.clearAll();
-        });
-      }
-
-      this.touchControls.updateState(
-        this.player.stamina >= PLAYER.DODGE_STAMINA_COST,
-        this.qteManager.bombs,
-      );
-    } else {
-      // Existing keyboard input
-      var mx=0, my=0;
-      if (this.controlMode === 'wasd') {
-        if (this.wasdKeys.A.isDown) mx=-1;
-        if (this.wasdKeys.D.isDown) mx=1;
-        if (this.wasdKeys.W.isDown) my=-1;
-        if (this.wasdKeys.S.isDown) my=1;
-      } else {
-        if (this.cursors.left.isDown) mx=-1;
-        if (this.cursors.right.isDown) mx=1;
-        if (this.cursors.up.isDown) my=-1;
-        if (this.cursors.down.isDown) my=1;
-      }
-      this.player.move(mx, my);
-      var dp = this.dodgeKey==='SHIFT' ? Phaser.Input.Keyboard.JustDown(this.shiftKey) : Phaser.Input.Keyboard.JustDown(this.spaceKey);
-      if (dp) this.player.dodge();
-      if (Phaser.Input.Keyboard.JustDown(this.bombKey)) {
-        this.qteManager.useBomb(this.gimmickManager.clearAllGimmicks.bind(this.gimmickManager));
-      }
-    }
+    if (this.inputController) this.inputController.handleInput(this.player, this.qteManager);
   }
 
   _togglePause() {
@@ -283,25 +257,18 @@ export default class GameScene extends Phaser.Scene {
   }
 
   _pauseGame() {
-    if (this.isPaused) return;
-    this.isPaused = true;
-    this.scene.pause();
-    this.scene.launch('PauseScene', {
-      returnScene: 'GameScene',
-      onResume: function() { this._resumeGame(); }.bind(this),
-    });
+    PauseFlow.pause(this, 'GameScene', function() { this._resumeGame(); }.bind(this));
   }
 
   _resumeGame() {
-    this.isPaused = false;
-    this.scene.stop('PauseScene');
-    this.scene.resume();
+    PauseFlow.resume(this);
   }
 
   shutdown() {
     if (this.gimmickManager) this.gimmickManager.destroy();
     if (this.qteManager) this.qteManager.destroy();
     if (this.scoreManager) this.scoreManager.destroy();
+    if (this.inputController) this.inputController.destroy();
     if (this._countdownTimer) this._countdownTimer.remove(false);
     if (this._stageTimer) this._stageTimer.remove(false);
     if (this._onGimmickDodged) this.events.off('gimmickDodged', this._onGimmickDodged);

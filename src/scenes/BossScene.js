@@ -7,6 +7,9 @@ import LaserManager from '../systems/LaserManager.js';
 import BulletManager from '../systems/BulletManager.js';
 import FloorManager from '../systems/FloorManager.js';
 import QTEManager from '../systems/QTEManager.js';
+import ScoreManager from '../systems/ScoreManager.js';
+import CombatInputController from '../systems/CombatInputController.js';
+import PauseFlow from '../systems/PauseFlow.js';
 import { getBossConfig } from '../patterns/bossConfigs.js';
 import {
   FLOOR_PATTERNS,
@@ -29,6 +32,8 @@ export default class BossScene extends Phaser.Scene {
     this.dodgeKey = data.dodgeKey || 'SHIFT';
     this.currentStage = data.stage || 5;
     this.totalScore = data.totalScore || 0;
+    this.scoreState = data.scoreState || null;
+    this.qteState = data.qteState || null;
     this.bossIndex = STAGE.BOSS_STAGES.indexOf(this.currentStage);
     this.mobileMode = data.mobileMode || false;
     this.touchControlScale = data.touchControlScale || 1.0;
@@ -63,6 +68,23 @@ export default class BossScene extends Phaser.Scene {
     this.floorManager = new FloorManager(this);
     this.qteManager = new QTEManager(this, this.player);
     this.qteManager.configure(this.controlMode, this.gameMode, this.mobileMode);
+    this.qteManager.importState(this.qteState);
+    this.inputController = new CombatInputController(this, {
+      getControlMode: () => this.controlMode,
+      getDodgeKey: () => this.dodgeKey,
+      getMobileMode: () => this.mobileMode,
+      getTouchControls: () => this.touchControls,
+      isInputLocked: () => this._waitingForNext,
+      onPauseToggle: () => this._togglePause(),
+      onBomb: () => {
+        this.laserManager.clearAll();
+        this.bulletManager.clearAll();
+        this.floorManager.clearAll();
+        if (this.boss && this.boss.isAlive) {
+          this.boss.takeDamage(this.bossConfig.qteDamage || 0);
+        }
+      },
+    });
 
     // Bullet overlap
     this.bulletManager.setupOverlap(this.player, (player) => {
@@ -159,7 +181,7 @@ export default class BossScene extends Phaser.Scene {
     this.events.emit('updateHP', { current: this.player.hp, max: PLAYER.MAX_HP });
     this.events.emit('updateStamina', { current: this.player.stamina, max: PLAYER.MAX_STAMINA });
     this.events.emit('updateScore', { score: this.totalScore });
-    this.events.emit('updateBombs', { count: 0 });
+    this.events.emit('updateBombs', { count: this.qteManager.bombs });
     this.events.on('playerDeath', this._onGameOver, this);
 
     this.game.events.emit('bossStarted', { stage: this.currentStage });
@@ -269,6 +291,10 @@ export default class BossScene extends Phaser.Scene {
         break;
 
       case 'fan_bullets':
+        {
+        const dir = Phaser.Math.RadToDeg(
+          Phaser.Math.Angle.Between(this.boss.x, this.boss.y, this.player.x, this.player.y)
+        );
         this.bulletManager.firePattern({
           type: 'fan',
           originX: this.boss.x,
@@ -276,8 +302,9 @@ export default class BossScene extends Phaser.Scene {
           count: cfg.count,
           speed: cfg.speed,
           angle: cfg.angle,
-          direction: 90, // downward
+          direction: dir,
         });
+        }
         break;
 
       case 'circle_bullets':
@@ -563,82 +590,11 @@ export default class BossScene extends Phaser.Scene {
   // ===================================================
 
   setupInput() {
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.wasdKeys = this.input.keyboard.addKeys({
-      W: Phaser.Input.Keyboard.KeyCodes.W,
-      A: Phaser.Input.Keyboard.KeyCodes.A,
-      S: Phaser.Input.Keyboard.KeyCodes.S,
-      D: Phaser.Input.Keyboard.KeyCodes.D,
-    });
-    this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
-    this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    this.bombKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Y);
-    this.pauseKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F10);
-    this.pauseKey.on('down', this._togglePause, this);
-    this.input.mouse.disableContextMenu();
+    if (this.inputController) this.inputController.setupInput();
   }
 
   handleInput() {
-    if (this._waitingForNext) return;
-
-    if (this.mobileMode && this.touchControls) {
-      const move = this.touchControls.getMovement();
-      this.player.move(move.x, move.y);
-
-      if (this.touchControls.consumeDash()) {
-        this.player.dodge();
-      }
-
-      if (this.touchControls.consumeBomb()) {
-        this.qteManager.useBomb(() => {
-          this.laserManager.clearAll();
-          this.bulletManager.clearAll();
-          this.floorManager.clearAll();
-          // Boss damage (same as keyboard bomb)
-          if (this.boss && this.boss.isAlive) {
-            this.boss.takeDamage(this.bossConfig.qteDamage);
-            if (!this.boss.isAlive) this._onBossDefeated();
-          }
-        });
-      }
-
-      this.touchControls.updateState(
-        this.player.stamina >= PLAYER.DODGE_STAMINA_COST,
-        this.qteManager.bombs,
-      );
-    } else {
-      let moveX = 0, moveY = 0;
-      if (this.controlMode === 'wasd') {
-        if (this.wasdKeys.A.isDown) moveX = -1;
-        if (this.wasdKeys.D.isDown) moveX = 1;
-        if (this.wasdKeys.W.isDown) moveY = -1;
-        if (this.wasdKeys.S.isDown) moveY = 1;
-      } else {
-        if (this.cursors.left.isDown) moveX = -1;
-        if (this.cursors.right.isDown) moveX = 1;
-        if (this.cursors.up.isDown) moveY = -1;
-        if (this.cursors.down.isDown) moveY = 1;
-      }
-
-      this.player.move(moveX, moveY);
-
-      const dodgePressed = (this.dodgeKey === 'SHIFT')
-        ? Phaser.Input.Keyboard.JustDown(this.shiftKey)
-        : Phaser.Input.Keyboard.JustDown(this.spaceKey);
-      if (dodgePressed) this.player.dodge();
-
-      if (Phaser.Input.Keyboard.JustDown(this.bombKey)) {
-        this.qteManager.useBomb(() => {
-          this.laserManager.clearAll();
-          this.bulletManager.clearAll();
-          this.floorManager.clearAll();
-          // 보스는 사라지지 않지만, QTE 1회 분량 데미지를 입힘
-          if (this.boss && this.boss.isAlive) {
-            this.boss.takeDamage(this.bossConfig.qteDamage || 0);
-          }
-        });
-      }
-    }
+    if (this.inputController) this.inputController.handleInput(this.player, this.qteManager);
   }
 
   // ===================================================
@@ -677,12 +633,7 @@ export default class BossScene extends Phaser.Scene {
     }
     var next = this.currentStage + 1;
     if (next > STAGE.TOTAL) {
-      this.game.events.emit('gameEnd', {
-        reason: 'clear',
-        stage: this.currentStage,
-        mode: this.gameMode,
-        score: this.totalScore,
-      });
+      this.game.events.emit('gameEnd', this._buildBossResultData('clear', this.player ? this.player.hp : 0));
       return;
     }
     // BossScene 내부에서 직접 씬 전환 (Phaser 라이프사이클 보장)
@@ -697,6 +648,8 @@ export default class BossScene extends Phaser.Scene {
         playerHP: this.player ? this.player.hp : PLAYER.MAX_HP,
         totalScore: this.totalScore,
         mobileMode: this.mobileMode, touchControlScale: this.touchControlScale,
+        scoreState: this.scoreState,
+        qteState: this.qteManager.exportState(),
       });
     });
   }
@@ -710,14 +663,20 @@ export default class BossScene extends Phaser.Scene {
     this.bulletManager.clearAll();
     this.floorManager.clearAll();
     this.time.delayedCall(300, () => {
-      this.game.events.emit('gameEnd', {
-        reason: 'death',
-        mode: this.gameMode,
-        stage: this.currentStage,
-        score: this.totalScore,
-        remainingHP: 0,
-      });
+      this.game.events.emit('gameEnd', this._buildBossResultData('death', 0));
     });
+  }
+
+  _buildBossResultData(reason, remainingHP) {
+    const score = new ScoreManager(this);
+    if (this.scoreState) {
+      score.importState(this.scoreState);
+    } else {
+      score.carryOverScore = this.totalScore;
+    }
+    const out = score.getResultData(this.currentStage, this.gameMode, reason, remainingHP);
+    score.destroy();
+    return out;
   }
 
   // ===================================================
@@ -729,19 +688,11 @@ export default class BossScene extends Phaser.Scene {
   }
 
   _pauseGame() {
-    if (this.isPaused) return;
-    this.isPaused = true;
-    this.scene.pause();
-    this.scene.launch('PauseScene', {
-      returnScene: 'BossScene',
-      onResume: () => { this._resumeGame(); },
-    });
+    PauseFlow.pause(this, 'BossScene', () => { this._resumeGame(); });
   }
 
   _resumeGame() {
-    this.isPaused = false;
-    this.scene.stop('PauseScene');
-    this.scene.resume();
+    PauseFlow.resume(this);
   }
 
   // ===================================================
@@ -752,6 +703,7 @@ export default class BossScene extends Phaser.Scene {
     if (this._qteTimer) this._qteTimer.remove(false);
     if (this._countdownTimer) this._countdownTimer.remove(false);
     if (this._floorPatternTimer) this._floorPatternTimer.remove(false);
+    if (this.inputController) this.inputController.destroy();
     if (this.qteManager) {
       this.qteManager.cancel();
       this.qteManager.destroy();
