@@ -11,8 +11,9 @@ export const PLAYER = {
   DODGE_STAMINA_COST: 5,
   DODGE_DURATION: 300,      // 구르기 무적 시간 (ms)
   DODGE_DISTANCE: 120,      // 구르기 이동 거리
-  MOVE_SPEED: 200,          // 이동 속도 (px/s)
-  HITBOX_RADIUS: 14,        // 히트박스 반지름
+  MOVE_SPEED: 220,          // 이동 속도 (px/s)
+  HITBOX_RADIUS: 10,        // 히트박스 반지름
+  DAMAGE_INVINCIBLE_MS: 500, // 피격 후 무적 시간 (ms)
 };
 
 // QTE 판정 범위
@@ -21,6 +22,21 @@ export const QTE = {
   GOOD_THRESHOLD: 0.15,     // |차이| <= 0.15 → Good
   GREAT_INVINCIBLE: 300,    // Great 시 무적 시간 (ms)
   BOMB_COMBO_REQUIRED: 5,   // 폭탄 획득에 필요한 연속 Great
+  RANDOMIZE_STAGE_SEQUENCES: true, // stagePatterns 고정 sequence를 무시하고 길이만 사용해 랜덤 생성
+};
+
+// 패턴 증폭/밀도 튜닝
+export const PATTERN = {
+  AMPLIFY_BASE: 1.4,
+  AMPLIFY_PER_TIER: 0.35,
+  EXTRA_EVENT_FACTOR: 0.5,    // 복제 이벤트 강도
+  EXTRA_OFFSET_MIN: 0.4,
+  EXTRA_OFFSET_MAX: 1.4,
+  AUTO_QTE_BASE_INTERVAL: 9,  // 스테이지 상승 전 기본 QTE 삽입 간격(초)
+  AUTO_QTE_MIN_INTERVAL: 6,   // 최소 QTE 삽입 간격(초)
+  ENABLE_FILLER_EVENTS: false,
+  FILLER_SCAN_STEP: 1.2,
+  FILLER_GAP_THRESHOLD: 1.0,
 };
 
 // 스코어링
@@ -72,6 +88,37 @@ export const MODE = {
 export const CONTROL = {
   ARROWS: 'arrows',
   WASD: 'wasd',
+};
+
+// 터치 컨트롤
+export const TOUCH = {
+  // 조이스틱
+  JOYSTICK_RADIUS: 45,
+  JOYSTICK_THUMB_RADIUS: 17,
+  JOYSTICK_MARGIN_X: 69,
+  JOYSTICK_MARGIN_Y: 61,
+
+  // 대쉬 버튼
+  DASH_RADIUS: 35,
+  DASH_MARGIN_X: 59,
+  DASH_MARGIN_Y: 51,
+
+  // 폭탄 버튼 (대쉬의 우상단, 크기 1/2)
+  BOMB_RADIUS: 19,
+  BOMB_OFFSET_X: 27,
+  BOMB_OFFSET_Y: -56,
+
+  // 배율 범위
+  SCALE_MIN: 0.7,
+  SCALE_MAX: 1.3,
+  SCALE_DEFAULT: 1.0,
+  SCALE_STEP: 0.1,
+
+  // QTE 프롬프트 터치 히트 패딩
+  QTE_HIT_PADDING: 10,
+
+  // 컨트롤 영역 (QTE 프롬프트 하단 회피용)
+  CONTROL_ZONE_RATIO: 0.25,
 };
 
 // 색상 팔레트 (접근성 고려)

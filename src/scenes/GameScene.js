@@ -8,6 +8,7 @@ import QTEManager from '../systems/QTEManager.js';
 import GimmickManager from '../systems/GimmickManager.js';
 import { getStagePattern } from '../patterns/stagePatterns.js';
 import ScoreManager from '../systems/ScoreManager.js';
+import TouchControls from '../systems/TouchControls.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() { super({ key: 'GameScene' }); }
@@ -19,6 +20,8 @@ export default class GameScene extends Phaser.Scene {
     this.currentStage = data.stage || 1;
     this.playerHP = data.playerHP || PLAYER.MAX_HP;
     this.totalScore = data.totalScore || 0;
+    this.mobileMode = data.mobileMode || false;
+    this.touchControlScale = data.touchControlScale || 1.0;
     this.stageCleared = false;
     this._floorHitCooldown = false;
     this._laserHitCooldown = false;
@@ -35,7 +38,7 @@ export default class GameScene extends Phaser.Scene {
     this.bulletManager = new BulletManager(this, this.player);
     this.floorManager = new FloorManager(this);
     this.qteManager = new QTEManager(this, this.player);
-    this.qteManager.configure(this.controlMode, this.gameMode);
+    this.qteManager.configure(this.controlMode, this.gameMode, this.mobileMode);
     this.gimmickManager = new GimmickManager(this, {
       laser: this.laserManager, bullet: this.bulletManager,
       floor: this.floorManager, qte: this.qteManager,
@@ -44,12 +47,24 @@ export default class GameScene extends Phaser.Scene {
     this.scoreManager.carryOverScore = this.totalScore;
     this.scoreManager.startSurvivalTimer();
     this.bulletManager.setupOverlap(this.player, function(p) {
-      p.takeDamage(10);
-      this.scoreManager.onDamageTaken();
+      const took = p.takeDamage(10);
+      if (took) this.scoreManager.onDamageTaken('bullet');
     }, this);
+    this._onGimmickDodged = this._onGimmickDodged || this.onGimmickDodged.bind(this);
+    this.events.on('gimmickDodged', this._onGimmickDodged);
     this.setupInput();
+    this.touchControls = null;
+    if (this.mobileMode) {
+      this.touchControls = new TouchControls(this, this.touchControlScale);
+    }
+    this.events.once('shutdown', () => {
+      if (this.touchControls) {
+        this.touchControls.destroy();
+        this.touchControls = null;
+      }
+    });
     this.scene.stop('UIScene');
-    this.scene.launch('UIScene', { mode: this.gameMode, stage: this.currentStage });
+    this.scene.launch('UIScene', { mode: this.gameMode, stage: this.currentStage, mobileMode: this.mobileMode });
     // 초기 HUD 동기화 emit은 한 프레임 지연시켜, 새 UIScene이 launch+bind된 뒤에 수신하도록 보장
     // (이전 UIScene 인스턴스의 destroy된 Text에 도달하는 것을 방지)
     this.time.delayedCall(0, function() {
@@ -67,18 +82,34 @@ export default class GameScene extends Phaser.Scene {
     if (this.isPaused) return;
     if (!this.player || !this.player.isAlive || this.stageCleared) return;
     this.handleInput();
-    if (!this._laserHitCooldown && this.laserManager.checkCollision(this.player)) {
-      this.player.takeDamage(15);
-      this.scoreManager.onDamageTaken();
+    this.bulletManager.update();
+    const laserHit = this.laserManager.checkCollision(this.player);
+    if (!this._laserHitCooldown && laserHit) {
+      const took = this.player.takeDamage(15);
+      if (took) {
+        this.laserManager.markDamaged(laserHit);
+        this.scoreManager.onDamageTaken('laser');
+      }
       this._laserHitCooldown = true;
       this.time.delayedCall(600, function() { this._laserHitCooldown = false; }.bind(this));
     }
-    if (!this._floorHitCooldown && this.floorManager.checkCollision(this.player)) {
-      this.player.takeDamage(10);
-      this.scoreManager.onDamageTaken();
+    const floorHit = this.floorManager.checkCollision(this.player);
+    if (!this._floorHitCooldown && floorHit) {
+      const took = this.player.takeDamage(10);
+      if (took) {
+        this.floorManager.markDamaged(floorHit);
+        this.scoreManager.onDamageTaken('floor');
+      }
       this._floorHitCooldown = true;
       this.time.delayedCall(500, function() { this._floorHitCooldown = false; }.bind(this));
     }
+  }
+
+  onGimmickDodged(data) {
+    if (!data || this.stageCleared || !this.player || !this.player.isAlive) return;
+    if (data.type === 'bullet') this.scoreManager.onBulletDodged();
+    if (data.type === 'laser') this.scoreManager.onLaserDodged();
+    if (data.type === 'floor') this.scoreManager.onFloorDodged();
   }
 
   _loadStagePattern() {
@@ -162,7 +193,8 @@ export default class GameScene extends Phaser.Scene {
     this.cameras.main.fadeOut(300, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', function() {
       var sd = { mode:this.gameMode, controlMode:this.controlMode, dodgeKey:this.dodgeKey,
-        stage:next, playerHP:this.player.hp, totalScore:this.totalScore };
+        stage:next, playerHP:this.player.hp, totalScore:this.totalScore,
+        mobileMode:this.mobileMode, touchControlScale:this.touchControlScale };
       if (STAGE.BOSS_STAGES.includes(next)) {
         this.scene.start('BossScene', sd);
       } else {
@@ -202,23 +234,47 @@ export default class GameScene extends Phaser.Scene {
   }
 
   handleInput() {
-    var mx=0, my=0;
-    if (this.controlMode === 'wasd') {
-      if (this.wasdKeys.A.isDown) mx=-1;
-      if (this.wasdKeys.D.isDown) mx=1;
-      if (this.wasdKeys.W.isDown) my=-1;
-      if (this.wasdKeys.S.isDown) my=1;
+    if (this.mobileMode && this.touchControls) {
+      // Touch input
+      const move = this.touchControls.getMovement();
+      this.player.move(move.x, move.y);
+
+      if (this.touchControls.consumeDash()) {
+        this.player.dodge();
+      }
+
+      if (this.touchControls.consumeBomb() && !this.qteManager.isActive) {
+        this.qteManager.useBomb(() => {
+          this.laserManager.clearAll();
+          this.bulletManager.clearAll();
+          this.floorManager.clearAll();
+        });
+      }
+
+      this.touchControls.updateState(
+        this.player.stamina >= PLAYER.DODGE_STAMINA_COST,
+        this.qteManager.bombs,
+      );
     } else {
-      if (this.cursors.left.isDown) mx=-1;
-      if (this.cursors.right.isDown) mx=1;
-      if (this.cursors.up.isDown) my=-1;
-      if (this.cursors.down.isDown) my=1;
-    }
-    this.player.move(mx, my);
-    var dp = this.dodgeKey==='SHIFT' ? Phaser.Input.Keyboard.JustDown(this.shiftKey) : Phaser.Input.Keyboard.JustDown(this.spaceKey);
-    if (dp) this.player.dodge();
-    if (Phaser.Input.Keyboard.JustDown(this.bombKey) && !this.qteManager.isActive) {
-      this.qteManager.useBomb(this.gimmickManager.clearAllGimmicks.bind(this.gimmickManager));
+      // Existing keyboard input
+      var mx=0, my=0;
+      if (this.controlMode === 'wasd') {
+        if (this.wasdKeys.A.isDown) mx=-1;
+        if (this.wasdKeys.D.isDown) mx=1;
+        if (this.wasdKeys.W.isDown) my=-1;
+        if (this.wasdKeys.S.isDown) my=1;
+      } else {
+        if (this.cursors.left.isDown) mx=-1;
+        if (this.cursors.right.isDown) mx=1;
+        if (this.cursors.up.isDown) my=-1;
+        if (this.cursors.down.isDown) my=1;
+      }
+      this.player.move(mx, my);
+      var dp = this.dodgeKey==='SHIFT' ? Phaser.Input.Keyboard.JustDown(this.shiftKey) : Phaser.Input.Keyboard.JustDown(this.spaceKey);
+      if (dp) this.player.dodge();
+      if (Phaser.Input.Keyboard.JustDown(this.bombKey) && !this.qteManager.isActive) {
+        this.qteManager.useBomb(this.gimmickManager.clearAllGimmicks.bind(this.gimmickManager));
+      }
     }
   }
 
@@ -248,5 +304,6 @@ export default class GameScene extends Phaser.Scene {
     if (this.scoreManager) this.scoreManager.destroy();
     if (this._countdownTimer) this._countdownTimer.remove(false);
     if (this._stageTimer) this._stageTimer.remove(false);
+    if (this._onGimmickDodged) this.events.off('gimmickDodged', this._onGimmickDodged);
   }
 }

@@ -34,13 +34,25 @@ export function initUI() {
       document.getElementById('options-panel').style.display = 'flex';
     });
 
+    // 모바일 모드 체크박스 → 슬라이더 행 표시/숨김
+    document.getElementById('opt-mobile').addEventListener('change', (e) => {
+      document.getElementById('mobile-scale-row').style.display = e.target.checked ? 'flex' : 'none';
+    });
+
+    // 스케일 슬라이더 → 레이블 실시간 업데이트
+    document.getElementById('opt-scale').addEventListener('input', (e) => {
+      document.getElementById('scale-value').textContent = parseFloat(e.target.value).toFixed(1);
+    });
+
     // 옵션 저장
     document.getElementById('btn-options-save').addEventListener('click', () => {
       const controlMode = document.querySelector('input[name="controlMode"]:checked').value;
       const dodgeKey = document.querySelector('input[name="dodgeKey"]:checked').value;
-      saveSettings({ controlMode, dodgeKey });
+      const mobileMode = document.getElementById('opt-mobile').checked;
+      const touchControlScale = parseFloat(document.getElementById('opt-scale').value);
+      saveSettings({ controlMode, dodgeKey, mobileMode, touchControlScale });
       document.getElementById('options-panel').style.display = 'none';
-      console.log('[UI] 설정 저장:', { controlMode, dodgeKey });
+      console.log('[UI] 설정 저장:', { controlMode, dodgeKey, mobileMode, touchControlScale });
     });
 
     // 옵션 취소
@@ -89,4 +101,21 @@ function applySettingsToUI(settings) {
 
   const dodgeRadio = document.querySelector(`input[name="dodgeKey"][value="${settings.dodgeKey}"]`);
   if (dodgeRadio) dodgeRadio.checked = true;
+
+  const mobileCheckbox = document.getElementById('opt-mobile');
+  if (mobileCheckbox) {
+    if (settings.mobileMode === null || settings.mobileMode === undefined) {
+      mobileCheckbox.checked = navigator.maxTouchPoints > 0;
+    } else {
+      mobileCheckbox.checked = settings.mobileMode;
+    }
+    const scaleRow = document.getElementById('mobile-scale-row');
+    if (scaleRow) scaleRow.style.display = mobileCheckbox.checked ? 'flex' : 'none';
+  }
+  const scaleSlider = document.getElementById('opt-scale');
+  if (scaleSlider) {
+    scaleSlider.value = settings.touchControlScale || 1.0;
+    const scaleLabel = document.getElementById('scale-value');
+    if (scaleLabel) scaleLabel.textContent = (settings.touchControlScale || 1.0).toFixed(1);
+  }
 }
