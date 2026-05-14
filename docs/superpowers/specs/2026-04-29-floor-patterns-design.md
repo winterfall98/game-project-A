@@ -1,7 +1,7 @@
 # Floor Pattern System Design
 
 날짜: 2026-04-29
-대상 코드베이스: Phaser 3 기반 QTE Dodge 게임 (qte-dodge-game)
+대상 코드베이스: Phaser 3 기반 `집중력 미포함` 게임 (attention-not-included)
 
 ## 목적
 

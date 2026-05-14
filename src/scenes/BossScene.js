@@ -518,8 +518,8 @@ export default class BossScene extends Phaser.Scene {
   _startFinalQTE() {
     const fqte = this.bossConfig.finalQTE;
 
-    const txt = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, 'FINAL STRIKE!', {
-      fontFamily: 'monospace', fontSize: '32px', fontStyle: 'bold', color: '#ff1744',
+    const txt = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, '최후의 일격!', {
+      fontFamily: '"Noto Sans KR", "Segoe UI", sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ff1744',
     }).setOrigin(0.5).setDepth(110);
 
     this.tweens.add({
@@ -602,8 +602,8 @@ export default class BossScene extends Phaser.Scene {
   // ===================================================
 
   _showBossClearWait() {
-    const ct = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20, 'BOSS DEFEATED!', {
-      fontFamily: 'monospace', fontSize: '28px', fontStyle: 'bold', color: '#4fc3f7',
+    const ct = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20, '보스 처치!', {
+      fontFamily: '"Noto Sans KR", "Segoe UI", sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#4fc3f7',
     }).setOrigin(0.5).setDepth(200).setAlpha(0).setScale(0.5);
     this.tweens.add({ targets: ct, alpha: 1, scaleX: 1, scaleY: 1, duration: 400, ease: 'Back.easeOut' });
 
@@ -611,8 +611,8 @@ export default class BossScene extends Phaser.Scene {
     const self = this;
 
     this.time.delayedCall(1000, () => {
-      const hint = self.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, 'PRESS ENTER OR CLICK TO CONTINUE', {
-        fontFamily: 'monospace', fontSize: '14px', color: '#7c7caa',
+      const hint = self.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, '계속하려면 Enter 또는 화면을 클릭하세요', {
+        fontFamily: '"Noto Sans KR", "Segoe UI", sans-serif', fontSize: '14px', color: '#7c7caa',
       }).setOrigin(0.5).setDepth(200);
       self.tweens.add({ targets: hint, alpha: 0.4, duration: 600, yoyo: true, repeat: -1 });
 

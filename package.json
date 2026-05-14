@@ -1,7 +1,7 @@
 {
-  "name": "qte-dodge-game",
+  "name": "attention-not-included",
   "version": "0.1.0",
-  "description": "QTE 액션 피하기 게임 - 레이드 연습 시뮬레이터",
+  "description": "집중력 미포함 - Attention Not Included",
   "type": "module",
   "scripts": {
     "dev": "vite",

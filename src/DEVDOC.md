@@ -1,4 +1,6 @@
-# QTE Dodge Game — 개발 문서
+# 집중력 미포함 — 개발 문서
+
+영문명: Attention Not Included
 
 ## 개요
 

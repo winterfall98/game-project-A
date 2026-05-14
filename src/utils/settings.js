@@ -2,7 +2,8 @@
 
 import { DEFAULT_SETTINGS } from '../constants/keys.js';
 
-const STORAGE_KEY = 'qte-dodge-game-settings';
+const STORAGE_KEY = 'attention-not-included-settings';
+const LEGACY_STORAGE_KEY = 'qte-dodge-game-settings';
 
 /**
  * 설정을 localStorage에서 로드
@@ -10,7 +11,7 @@ const STORAGE_KEY = 'qte-dodge-game-settings';
  */
 export function loadSettings() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
     if (saved) {
       return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
     }
@@ -27,6 +28,7 @@ export function loadSettings() {
 export function saveSettings(settings) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch (e) {
     console.warn('설정 저장 실패:', e);
   }
@@ -38,6 +40,7 @@ export function saveSettings(settings) {
 export function resetSettings() {
   try {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch (e) {
     console.warn('설정 초기화 실패:', e);
   }

@@ -1,1 +1,3 @@
-# game-project-A
+# 집중력 미포함
+
+English title: Attention Not Included

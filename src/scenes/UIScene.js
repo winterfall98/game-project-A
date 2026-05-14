@@ -27,13 +27,13 @@ export default class UIScene extends Phaser.Scene {
 
   create() {
     // === Top-left info ===
-    const stageLabel = this.isBoss ? 'BOSS' : 'STAGE';
+    const stageLabel = this.isBoss ? '보스' : '스테이지';
 
     this.stageText = this.add.text(16, 12, `${stageLabel} ${this.currentStage}`, {
       fontFamily: 'monospace', fontSize: '16px', color: '#ffffff',
     });
 
-    this.scoreText = this.add.text(16, 36, 'SCORE: 0', {
+    this.scoreText = this.add.text(16, 36, '점수: 0', {
       fontFamily: 'monospace', fontSize: '14px', color: '#ffd740',
     });
 
@@ -161,16 +161,16 @@ export default class UIScene extends Phaser.Scene {
   }
 
   onUpdateScore({ score }) {
-    this.scoreText.setText(`SCORE: ${score}`);
+    this.scoreText.setText(`점수: ${score}`);
   }
 
   onUpdateCombo({ combo, multiplier }) {
     if (combo > 0) {
-      this.comboText.setText(`COMBO: ${combo}  (x${multiplier.toFixed(1)})`);
+      this.comboText.setText(`콤보: ${combo}  (x${multiplier.toFixed(1)})`);
 
       // Combo milestone pop effect (at 5, 10, 15)
       if (combo === 5 || combo === 10 || combo === 15 || combo === 20) {
-        this.comboPop.setText(`${combo} COMBO!`);
+        this.comboPop.setText(`${combo} 콤보!`);
         this.comboPop.setAlpha(1).setScale(0.5);
         this.tweens.add({
           targets: this.comboPop,
@@ -186,17 +186,17 @@ export default class UIScene extends Phaser.Scene {
   onUpdateBombs({ count }) {
     if (count > 0) {
       // Use text stars instead of unicode
-      this.bombText.setText('BOMB(Y): ' + '*'.repeat(count));
+      this.bombText.setText('폭탄(Y): ' + '*'.repeat(count));
     } else {
-      this.bombText.setText('BOMB KEY: Y');
+      this.bombText.setText('폭탄 키: Y');
     }
   }
 
   onUpdateMultiplier({ combo, accuracy, noDamage }) {
     const parts = [];
-    if (combo > 1.0) parts.push('CMB x' + combo.toFixed(1));
-    if (accuracy > 1.0) parts.push('ACC x' + accuracy.toFixed(1));
-    if (noDamage > 1) parts.push('ND x' + noDamage.toFixed(1));
+    if (combo > 1.0) parts.push('콤보 x' + combo.toFixed(1));
+    if (accuracy > 1.0) parts.push('정확도 x' + accuracy.toFixed(1));
+    if (noDamage > 1) parts.push('무피격 x' + noDamage.toFixed(1));
     this.multText.setText(parts.join(' | '));
   }
 

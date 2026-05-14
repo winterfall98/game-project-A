@@ -1,5 +1,5 @@
 /**
- * Stage Patterns for QTE Dodge Game
+ * Stage Patterns for Attention Not Included
  *
  * Defines difficulty progression across 20 stages with varying gimmick combinations.
  * Boss stages (5, 10, 15, 20) have empty events and are handled separately.

@@ -13,17 +13,18 @@ import { gameFlowBus, GAME_FLOW_EVENTS } from '../flow/gameFlowBus.js';
 export function showResultScreen(data) {
   const resultDiv = document.getElementById('result-screen');
   const isClear = data.reason === 'clear';
-  const title = isClear ? 'GAME CLEAR!' : 'GAME OVER';
+  const title = isClear ? '게임 클리어!' : '게임 오버';
   const titleColor = isClear ? '#4fc3f7' : '#ff1744';
   const grade = data.grade || 'D';
   const gradeColor = getGradeColor(grade);
+  const modeLabel = (data.mode || 'normal') === 'normal' ? '일반' : (data.mode || 'normal').toUpperCase();
 
   resultDiv.innerHTML = `
     <div id="result-card" class="result-card">
       <!-- Header -->
       <div class="result-header">
         <h1 class="result-title" style="color: ${titleColor}">${title}</h1>
-        <p class="result-mode">${(data.mode || 'normal').toUpperCase()} MODE | STAGE ${data.stage || '?'}</p>
+        <p class="result-mode">${modeLabel} 모드 | 스테이지 ${data.stage || '?'}</p>
       </div>
 
       <!-- Grade -->
@@ -34,41 +35,41 @@ export function showResultScreen(data) {
       <!-- Score -->
       <div class="result-score-area">
         <div class="result-final-score">${(data.finalScore || data.score || 0).toLocaleString()}</div>
-        <div class="result-score-label">FINAL SCORE</div>
+        <div class="result-score-label">최종 점수</div>
       </div>
 
       <!-- Multipliers -->
       <div class="result-multipliers">
-        ${data.comboMultiplier > 1 ? `<span class="mult-badge">COMBO x${data.comboMultiplier.toFixed(1)}</span>` : ''}
-        ${data.accuracyMultiplier > 1 ? `<span class="mult-badge">ACC x${data.accuracyMultiplier.toFixed(1)}</span>` : ''}
-        ${data.noDamageStages > 0 ? `<span class="mult-badge">NO DMG x${data.noDamageStages}</span>` : ''}
+        ${data.comboMultiplier > 1 ? `<span class="mult-badge">콤보 x${data.comboMultiplier.toFixed(1)}</span>` : ''}
+        ${data.accuracyMultiplier > 1 ? `<span class="mult-badge">정확도 x${data.accuracyMultiplier.toFixed(1)}</span>` : ''}
+        ${data.noDamageStages > 0 ? `<span class="mult-badge">무피격 x${data.noDamageStages}</span>` : ''}
       </div>
 
       <!-- Stats -->
       <div class="result-stats">
-        <div class="stat-row"><span class="stat-label">QTE Max Combo</span><span class="stat-value">${data.maxCombo || 0}</span></div>
-        <div class="stat-row"><span class="stat-label">QTE Accuracy</span><span class="stat-value">${data.accuracy || 0}%</span></div>
-        <div class="stat-row"><span class="stat-label">Great / Good / Fail</span><span class="stat-value">${data.totalGreat || 0} / ${data.totalGood || 0} / ${data.totalFail || 0}</span></div>
-        <div class="stat-row"><span class="stat-label">Remaining HP</span><span class="stat-value">${data.remainingHP || 0}</span></div>
-        ${data.noDamageStages > 0 ? `<div class="stat-row"><span class="stat-label">No-Damage Stages</span><span class="stat-value">${data.noDamageStages}</span></div>` : ''}
+        <div class="stat-row"><span class="stat-label">QTE 최대 콤보</span><span class="stat-value">${data.maxCombo || 0}</span></div>
+        <div class="stat-row"><span class="stat-label">QTE 정확도</span><span class="stat-value">${data.accuracy || 0}%</span></div>
+        <div class="stat-row"><span class="stat-label">최고 / 성공 / 실패</span><span class="stat-value">${data.totalGreat || 0} / ${data.totalGood || 0} / ${data.totalFail || 0}</span></div>
+        <div class="stat-row"><span class="stat-label">남은 체력</span><span class="stat-value">${data.remainingHP || 0}</span></div>
+        ${data.noDamageStages > 0 ? `<div class="stat-row"><span class="stat-label">무피격 스테이지</span><span class="stat-value">${data.noDamageStages}</span></div>` : ''}
       </div>
 
       <!-- Score Breakdown -->
       <div class="result-breakdown">
-        <div class="breakdown-row"><span>Survival</span><span>${data.survivalScore || 0}</span></div>
+        <div class="breakdown-row"><span>생존 점수</span><span>${data.survivalScore || 0}</span></div>
         <div class="breakdown-row"><span>QTE</span><span>${data.qteScore || 0}</span></div>
-        <div class="breakdown-row"><span>Clear Bonus</span><span>${data.stageClearScore || 0}</span></div>
-        ${data.bossKillScore > 0 ? `<div class="breakdown-row"><span>Boss Kill</span><span>${data.bossKillScore}</span></div>` : ''}
+        <div class="breakdown-row"><span>클리어 보너스</span><span>${data.stageClearScore || 0}</span></div>
+        ${data.bossKillScore > 0 ? `<div class="breakdown-row"><span>보스 처치</span><span>${data.bossKillScore}</span></div>` : ''}
       </div>
 
       <!-- Buttons -->
       <div class="result-buttons">
-        <button id="btn-share" class="result-btn result-btn-share">SHARE</button>
-        <button id="btn-return" class="result-btn result-btn-return">RETURN</button>
+        <button id="btn-share" class="result-btn result-btn-share">공유</button>
+        <button id="btn-return" class="result-btn result-btn-return">돌아가기</button>
       </div>
 
       <!-- Watermark for share image -->
-      <div class="result-watermark">QTE DODGE | ${new Date().toLocaleDateString()}</div>
+      <div class="result-watermark">Attention Not Included | 집중력 미포함 | ${new Date().toLocaleDateString()}</div>
     </div>
   `;
 
@@ -134,13 +135,13 @@ async function captureAndDownload() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `qte-dodge-result-${Date.now()}.png`;
+      a.download = `attention-not-included-result-${Date.now()}.png`;
       a.click();
       URL.revokeObjectURL(url);
     });
   } catch (e) {
     console.warn('Share capture failed:', e);
-    alert('Screenshot capture failed. Try right-clicking to save instead.');
+    alert('결과 이미지를 저장하지 못했습니다. 화면을 직접 캡처해 주세요.');
   }
 }
 
@@ -168,10 +169,10 @@ function injectResultStyles() {
     }
     .result-header { text-align: center; z-index: 1; }
     .result-title {
-      font-size: 36px; font-weight: 900; letter-spacing: 4px;
+      font-size: 36px; font-weight: 900; letter-spacing: 0;
       margin: 0 0 4px 0; animation: resultTitleIn 0.6s ease-out;
     }
-    .result-mode { font-size: 13px; color: #7c7caa; letter-spacing: 3px; margin: 0; }
+    .result-mode { font-size: 13px; color: #7c7caa; letter-spacing: 0; margin: 0; }
 
     .result-grade-area { z-index: 1; margin: 12px 0 8px; }
     .result-grade {
@@ -184,7 +185,7 @@ function injectResultStyles() {
       font-size: 28px; font-weight: 700; color: #ffd740;
       animation: scoreCount 0.5s ease-out 0.8s both;
     }
-    .result-score-label { font-size: 11px; color: #7c7caa; letter-spacing: 4px; }
+    .result-score-label { font-size: 11px; color: #7c7caa; letter-spacing: 0; }
 
     .result-multipliers {
       display: flex; gap: 8px; z-index: 1; margin-bottom: 10px;
@@ -219,7 +220,7 @@ function injectResultStyles() {
     .result-btn {
       padding: 10px 32px; font-size: 14px; font-weight: 700; font-family: monospace;
       border: 2px solid; border-radius: 6px; cursor: pointer;
-      background: transparent; letter-spacing: 2px; transition: all 0.2s;
+      background: transparent; letter-spacing: 0; transition: all 0.2s;
     }
     .result-btn:hover { transform: translateY(-2px); }
     .result-btn-share { border-color: #66bb6a; color: #66bb6a; }

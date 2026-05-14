@@ -82,7 +82,7 @@ function _createStageSelect() {
   wrapper.style.cssText = 'position:absolute;bottom:16px;right:16px;z-index:5;display:flex;align-items:center;gap:8px;';
 
   const label = document.createElement('span');
-  label.textContent = 'STAGE:';
+  label.textContent = '스테이지:';
   label.style.cssText = 'font-family:monospace;font-size:12px;color:#7c7caa;';
 
   const select = document.createElement('select');
@@ -91,7 +91,7 @@ function _createStageSelect() {
   for (let i = 1; i <= STAGE.TOTAL; i++) {
     const opt = document.createElement('option');
     opt.value = i;
-    opt.textContent = i + (STAGE.BOSS_STAGES.includes(i) ? ' (BOSS)' : '');
+    opt.textContent = i + (STAGE.BOSS_STAGES.includes(i) ? ' (보스)' : '');
     select.appendChild(opt);
   }
 

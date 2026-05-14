@@ -65,9 +65,9 @@ body {
 
 /* 타이틀 */
 .game-title {
-  font-size: 48px;
+  font-size: clamp(32px, 7vw, 48px);
   font-weight: 900;
-  letter-spacing: 4px;
+  letter-spacing: 0;
   color: #4fc3f7;
   text-shadow:
     0 0 20px rgba(79, 195, 247, 0.5),
@@ -75,12 +75,14 @@ body {
   margin-bottom: 8px;
   z-index: 1;
   animation: titleGlow 2s ease-in-out infinite alternate;
+  text-align: center;
+  max-width: min(92vw, 760px);
 }
 
 .game-subtitle {
   font-size: 16px;
   color: #7c7caa;
-  letter-spacing: 6px;
+  letter-spacing: 0;
   margin-bottom: 60px;
   z-index: 1;
 }

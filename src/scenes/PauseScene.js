@@ -18,22 +18,22 @@ export default class PauseScene extends Phaser.Scene {
     // 반투명 어두운 배경
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7).setDepth(300);
 
-    // PAUSED 텍스트
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, 'PAUSED', {
-      fontFamily: 'monospace', fontSize: '36px', fontStyle: 'bold', color: '#4fc3f7',
+    // 일시정지 텍스트
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, '일시정지', {
+      fontFamily: '"Noto Sans KR", "Segoe UI", sans-serif', fontSize: '36px', fontStyle: 'bold', color: '#4fc3f7',
     }).setOrigin(0.5).setDepth(301);
 
     // 게임 재개 버튼
-    var resumeBtn = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 10, '[ RESUME  (F10) ]', {
-      fontFamily: 'monospace', fontSize: '18px', color: '#66bb6a',
+    var resumeBtn = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 10, '[ 계속하기  (F10) ]', {
+      fontFamily: '"Noto Sans KR", "Segoe UI", sans-serif', fontSize: '18px', color: '#66bb6a',
     }).setOrigin(0.5).setDepth(301).setInteractive({ useHandCursor: true });
     resumeBtn.on('pointerover', function() { resumeBtn.setColor('#a5d6a7'); });
     resumeBtn.on('pointerout', function() { resumeBtn.setColor('#66bb6a'); });
     resumeBtn.on('pointerdown', function() { this._resume(); }, this);
 
     // 메인으로 돌아가기 버튼
-    var mainBtn = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50, '[ RETURN TO MAIN ]', {
-      fontFamily: 'monospace', fontSize: '18px', color: '#ff7043',
+    var mainBtn = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50, '[ 처음으로 돌아가기 ]', {
+      fontFamily: '"Noto Sans KR", "Segoe UI", sans-serif', fontSize: '18px', color: '#ff7043',
     }).setOrigin(0.5).setDepth(301).setInteractive({ useHandCursor: true });
     mainBtn.on('pointerover', function() { mainBtn.setColor('#ffab91'); });
     mainBtn.on('pointerout', function() { mainBtn.setColor('#ff7043'); });
